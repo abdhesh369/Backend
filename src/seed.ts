@@ -69,7 +69,7 @@ export async function seedDatabase() {
         imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop",
         category: "Web",
         githubUrl: "https://github.com/yourusername/portfolio",
-        liveUrl: "https://yourportfolio.com",
+        liveUrl: "https://abdheshsah.com.np",
         problemStatement: "Needed a professional online presence to showcase projects and skills to potential employers and collaborators.",
         motivation: "Create a modern, responsive portfolio that demonstrates full-stack development capabilities.",
         systemDesign: "Full-stack application with React frontend, Express REST API, SQLite database, and Drizzle ORM for type-safe queries.",

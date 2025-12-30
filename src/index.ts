@@ -29,7 +29,6 @@ function log(message: string, source = "express") {
 
 // ------------------- MIDDLEWARE -------------------
 
-// CORS (required for separate frontend)
 // ------------------- CORS CONFIGURATION (UPDATED) -------------------
 
 // Define allowed origins
