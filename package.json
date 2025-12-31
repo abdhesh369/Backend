@@ -7,7 +7,9 @@
     "dev": "tsx src/index.ts",
     "postinstall": "npm rebuild better-sqlite3",
     "build": "tsc --project tsconfig.json",
-    "start": "bash start.sh"
+    "start": "bash start.sh",
+    "migrate": "npx drizzle-kit migrate",
+    "generate": "npx drizzle-kit generate"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",
