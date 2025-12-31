@@ -1,14 +1,10 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 import * as schema from "../shared/schema.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Logging utility
+// ========== LOGGING UTILITY ==========
 function log(message: string, level: "info" | "error" | "warn" = "info") {
   const timestamp = new Date().toISOString();
   const prefix = level === "error" ? "❌" : level === "warn" ? "⚠️" : "✓";
@@ -16,31 +12,22 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 }
 
 // ========== DETERMINE DATA DIRECTORY ==========
-// Simple logic: if running on Render or in production, use /tmp
-// Otherwise use local ./data directory
+// SIMPLE LOGIC: Use /tmp for production, ./data for development
 let dataDir: string;
 
-// Check if we're in production by looking at multiple indicators
-const isProduction = 
-  process.env.NODE_ENV === "production" || 
-  process.env.RENDER === "true" ||
-  !process.cwd().includes("WebDev");  // Not on local machine
-
-console.log(`[DB_INIT] NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[DB_INIT] RENDER: ${process.env.RENDER}`);
-console.log(`[DB_INIT] isProduction: ${isProduction}`);
-
-if (isProduction) {
-  // Production/Render: Always use /tmp
+if (process.env.NODE_ENV === "production" || process.env.RENDER === "true") {
+  // PRODUCTION / RENDER: Always use /tmp
   dataDir = "/tmp/portfolio-db";
-  console.log(`[DB_INIT] Using production path: ${dataDir}`);
+  console.log(`[DB_INIT] PRODUCTION MODE - Using /tmp`);
 } else {
-  // Development: use local data directory
-  dataDir = path.resolve(__dirname, "../data");
-  console.log(`[DB_INIT] Using development path: ${dataDir}`);
+  // DEVELOPMENT: Use local ./data
+  dataDir = path.resolve(process.cwd(), "data");
+  console.log(`[DB_INIT] DEVELOPMENT MODE - Using ./data`);
 }
 
-// Ensure data directory exists
+console.log(`[DB_INIT] Final dataDir: ${dataDir}`);
+
+// ========== CREATE DIRECTORY ==========
 try {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -51,62 +38,53 @@ try {
   throw error;
 }
 
-// Database file path
+// ========== DATABASE FILE PATH ==========
 const dbFile = path.resolve(dataDir, "database.sqlite");
 log(`Database file path: ${dbFile}`);
 
-// Initialize SQLite database
+// ========== INITIALIZE SQLITE ==========
 let sqliteDb: InstanceType<typeof Database>;
 try {
   sqliteDb = new Database(dbFile, {
     verbose: process.env.NODE_ENV !== "production" ? console.log : undefined,
   });
-  
   log(`Database ${fs.existsSync(dbFile) ? "opened" : "created"} successfully`);
 } catch (error) {
   log(`Failed to initialize database: ${error}`, "error");
   throw error;
 }
 
-// Configure SQLite for better performance and reliability
+// ========== CONFIGURE SQLITE ==========
 try {
-  // WAL mode for better concurrent access
   sqliteDb.pragma("journal_mode = WAL");
-  
-  // Improve performance
-  sqliteDb.pragma("synchronous = NORMAL"); // Balance between safety and speed
-  sqliteDb.pragma("cache_size = -64000"); // 64MB cache
-  sqliteDb.pragma("temp_store = MEMORY"); // Store temp tables in memory
-  sqliteDb.pragma("mmap_size = 30000000000"); // Memory-mapped I/O
-  
-  // Foreign key constraints
+  sqliteDb.pragma("synchronous = NORMAL");
+  sqliteDb.pragma("cache_size = -64000");
+  sqliteDb.pragma("temp_store = MEMORY");
+  sqliteDb.pragma("mmap_size = 30000000000");
   sqliteDb.pragma("foreign_keys = ON");
-  
   log("SQLite pragmas configured successfully");
 } catch (error) {
   log(`Failed to configure SQLite pragmas: ${error}`, "error");
   throw error;
 }
 
-// Create Drizzle ORM instance with schema
+// ========== CREATE DRIZZLE INSTANCE ==========
 export const db = drizzle(sqliteDb, { schema });
 
-// Export the raw SQLite instance for advanced queries
+// ========== EXPORT RAW SQLITE ==========
 export const sqlite: any = sqliteDb;
 
-// Export schema for use in other files
+// ========== EXPORT SCHEMA ==========
 export { schema };
 
-// Database health check function
+// ========== DATABASE HEALTH CHECK ==========
 export function checkDatabaseHealth(): {
   healthy: boolean;
   message: string;
   details?: any;
 } {
   try {
-    // Simple query to check if database is responsive
     const result = sqliteDb.prepare("SELECT 1 as health").get();
-    
     if (result && (result as any).health === 1) {
       return {
         healthy: true,
@@ -118,7 +96,6 @@ export function checkDatabaseHealth(): {
         },
       };
     }
-    
     return {
       healthy: false,
       message: "Database query returned unexpected result",
@@ -132,15 +109,11 @@ export function checkDatabaseHealth(): {
   }
 }
 
-// Graceful shutdown handler
+// ========== GRACEFUL SHUTDOWN ==========
 export async function closeDatabaseConnection(): Promise<void> {
   try {
-    // Checkpoint WAL file
     sqliteDb.pragma("wal_checkpoint(TRUNCATE)");
-    
-    // Close connection
     sqliteDb.close();
-    
     log("Database connection closed successfully");
   } catch (error) {
     log(`Error closing database connection: ${error}`, "error");
@@ -148,24 +121,17 @@ export async function closeDatabaseConnection(): Promise<void> {
   }
 }
 
-// Backup function (useful for production)
+// ========== DATABASE BACKUP ==========
 export function createBackup(backupPath?: string): string {
   try {
     const backupDir = backupPath || path.resolve(dataDir, "backups");
-    
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
-    
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFile = path.join(backupDir, `backup-${timestamp}.sqlite`);
-    
-    // Checkpoint WAL before backup
     sqliteDb.pragma("wal_checkpoint(TRUNCATE)");
-    
-    // Use VACUUM INTO for safe backup (SQLite 3.27.0+)
     sqliteDb.prepare(`VACUUM INTO ?`).run(backupFile);
-    
     log(`Database backup created: ${backupFile}`);
     return backupFile;
   } catch (error) {
@@ -174,15 +140,13 @@ export function createBackup(backupPath?: string): string {
   }
 }
 
-// Optional: Clean old backups (keep last N backups)
+// ========== CLEANUP OLD BACKUPS ==========
 export function cleanOldBackups(keepCount: number = 5): void {
   try {
     const backupDir = path.resolve(dataDir, "backups");
-    
     if (!fs.existsSync(backupDir)) {
       return;
     }
-    
     const backups = fs
       .readdirSync(backupDir)
       .filter((file) => file.endsWith(".sqlite"))
@@ -192,8 +156,6 @@ export function cleanOldBackups(keepCount: number = 5): void {
         time: fs.statSync(path.join(backupDir, file)).mtime.getTime(),
       }))
       .sort((a, b) => b.time - a.time);
-    
-    // Delete old backups
     backups.slice(keepCount).forEach((backup) => {
       fs.unlinkSync(backup.path);
       log(`Deleted old backup: ${backup.name}`);
@@ -203,10 +165,10 @@ export function cleanOldBackups(keepCount: number = 5): void {
   }
 }
 
-// Log database info on initialization
+// ========== LOG INITIALIZATION ==========
 log(`Database initialized with ${Object.keys(schema).length} tables`);
 
-// Handle process termination
+// ========== PROCESS CLEANUP ==========
 process.on("beforeExit", () => {
   closeDatabaseConnection().catch((error) => {
     log(`Error during cleanup: ${error}`, "error");
