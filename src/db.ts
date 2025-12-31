@@ -16,24 +16,27 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 }
 
 // ========== DETERMINE DATA DIRECTORY ==========
-// In production (Render), use /tmp or an absolute path
-// In development, use local ./data directory
+// Always use /tmp for database in any environment
+// This ensures data persists during service session
 let dataDir: string;
 
-console.log(`[DEBUG] NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[DEBUG] __dirname: ${__dirname}`);
+// Check if we're in Render environment
+const isRender = process.env.RENDER === "true" || process.env.RENDER_SERVICE_ID;
+const isProduction = process.env.NODE_ENV === "production";
 
-if (process.env.NODE_ENV === "production") {
-  // Use /tmp for Render - this persists during the service session
-  dataDir = process.env.DATABASE_PATH || "/tmp/portfolio-db";
-  log(`Production mode: Using database path: ${dataDir}`);
+console.log(`[DEBUG] isRender: ${isRender}, isProduction: ${isProduction}`);
+
+if (isRender || isProduction) {
+  // Production/Render: use /tmp
+  dataDir = "/tmp/portfolio-db";
+  log(`Production/Render mode: Using ${dataDir}`);
 } else {
   // Development: use local data directory
   dataDir = path.resolve(__dirname, "../data");
-  log(`Development mode: Using database path: ${dataDir}`);
+  log(`Development mode: Using ${dataDir}`);
 }
 
-console.log(`[DEBUG] Final dataDir: ${dataDir}`);
+console.log(`[DEBUG] Selected dataDir: ${dataDir}`);
 
 // Ensure data directory exists
 try {
