@@ -20,9 +20,11 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 // In development, use local ./data directory
 let dataDir: string;
 
+console.log(`[DEBUG] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[DEBUG] __dirname: ${__dirname}`);
+
 if (process.env.NODE_ENV === "production") {
-  // Use /tmp for Render (or specify a persistent disk mount point)
-  // If you set up a Render Persistent Disk, change /tmp to /mnt/data
+  // Use /tmp for Render - this persists during the service session
   dataDir = process.env.DATABASE_PATH || "/tmp/portfolio-db";
   log(`Production mode: Using database path: ${dataDir}`);
 } else {
@@ -30,6 +32,8 @@ if (process.env.NODE_ENV === "production") {
   dataDir = path.resolve(__dirname, "../data");
   log(`Development mode: Using database path: ${dataDir}`);
 }
+
+console.log(`[DEBUG] Final dataDir: ${dataDir}`);
 
 // Ensure data directory exists
 try {
