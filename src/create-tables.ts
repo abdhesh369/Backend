@@ -1,10 +1,17 @@
-import { sqlite } from "./db";
+import { db, sqlite } from "./db.js";
+
+function log(message: string, level: "info" | "error" | "warn" = "info") {
+  const timestamp = new Date().toISOString();
+  const prefix = level === "error" ? "❌" : level === "warn" ? "⚠️" : "✅";
+  console.log(`${prefix} [${timestamp}] [TABLES] ${message}`);
+}
 
 export async function createTables() {
-  console.log("Creating database tables...");
-
   try {
-    sqlite.exec(`
+    log("Creating database tables...");
+
+    // Create tables using raw SQL
+    const createTablesSQL = `
       CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -45,17 +52,22 @@ export async function createTables() {
         message TEXT NOT NULL,
         createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-    `);
+    `;
 
-    console.log("✅ All tables created successfully!");
+    sqlite.exec(createTablesSQL);
+    log("All tables created successfully!");
 
+    // Verify tables exist
     const tables = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-      .all();
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all() as any[];
 
-    console.log("📋 Tables in database:", tables.map((t: any) => t.name).join(", "));
+    const tableNames = tables.map((t) => t.name).join(", ");
+    log(`📋 Tables in database: ${tableNames}`);
+
+    return true;
   } catch (error) {
-    console.error("❌ Error creating tables:", error);
-    throw error; // bubble up to index.ts
+    log(`Failed to create tables: ${error}`, "error");
+    throw error;
   }
 }
