@@ -16,27 +16,29 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 }
 
 // ========== DETERMINE DATA DIRECTORY ==========
-// Always use /tmp for database in any environment
-// This ensures data persists during service session
+// Simple logic: if running on Render or in production, use /tmp
+// Otherwise use local ./data directory
 let dataDir: string;
 
-// Check if we're in Render environment
-const isRender = process.env.RENDER === "true" || process.env.RENDER_SERVICE_ID;
-const isProduction = process.env.NODE_ENV === "production";
+// Check if we're in production by looking at multiple indicators
+const isProduction = 
+  process.env.NODE_ENV === "production" || 
+  process.env.RENDER === "true" ||
+  !process.cwd().includes("WebDev");  // Not on local machine
 
-console.log(`[DEBUG] isRender: ${isRender}, isProduction: ${isProduction}`);
+console.log(`[DB_INIT] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[DB_INIT] RENDER: ${process.env.RENDER}`);
+console.log(`[DB_INIT] isProduction: ${isProduction}`);
 
-if (isRender || isProduction) {
-  // Production/Render: use /tmp
+if (isProduction) {
+  // Production/Render: Always use /tmp
   dataDir = "/tmp/portfolio-db";
-  log(`Production/Render mode: Using ${dataDir}`);
+  console.log(`[DB_INIT] Using production path: ${dataDir}`);
 } else {
   // Development: use local data directory
   dataDir = path.resolve(__dirname, "../data");
-  log(`Development mode: Using ${dataDir}`);
+  console.log(`[DB_INIT] Using development path: ${dataDir}`);
 }
-
-console.log(`[DEBUG] Selected dataDir: ${dataDir}`);
 
 // Ensure data directory exists
 try {

@@ -1,4 +1,4 @@
-import { db, sqlite } from "./db.js";
+import { sqlite } from "./db.js";
 
 function log(message: string, level: "info" | "error" | "warn" = "info") {
   const timestamp = new Date().toISOString();
@@ -8,7 +8,7 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 
 export async function createTables() {
   try {
-    log("Creating database tables...");
+    log("Starting table creation...");
 
     // Create tables using raw SQL
     const createTablesSQL = `
@@ -59,11 +59,11 @@ export async function createTables() {
 
     // Verify tables exist
     const tables = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
       .all() as any[];
 
     const tableNames = tables.map((t) => t.name).join(", ");
-    log(`📋 Tables in database: ${tableNames}`);
+    log(`📋 Verified ${tables.length} tables: ${tableNames}`);
 
     return true;
   } catch (error) {

@@ -1,13 +1,18 @@
-@echo off
-REM Set environment variables for Windows
-set NODE_ENV=production
-set DATABASE_PATH=/tmp/portfolio-db
-set RENDER=false
+#!/bin/bash
 
-echo Starting Portfolio Backend
-echo NODE_ENV: %NODE_ENV%
-echo DATABASE_PATH: %DATABASE_PATH%
-echo RENDER: %RENDER%
+# Set production environment for Render
+export NODE_ENV=production
+export RENDER=true
+export DATABASE_PATH=/tmp/portfolio-db
 
-REM Run the app
-node dist/src/index.js
+echo "================================================"
+echo "Starting Portfolio Backend on Render"
+echo "================================================"
+echo "NODE_ENV: $NODE_ENV"
+echo "RENDER: $RENDER"
+echo "DATABASE_PATH: $DATABASE_PATH"
+echo "PWD: $PWD"
+echo "================================================"
+
+# Run the Node app
+exec node dist/src/index.js
