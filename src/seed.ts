@@ -9,8 +9,15 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 
 export async function seedDatabase() {
   try {
-    // Check if database already has data
-    const existingProjects = await storage.getProjects();
+    // Check if database already has data (with error handling)
+    let existingProjects: any[] = [];
+    try {
+      existingProjects = await storage.getProjects();
+    } catch (err) {
+      // Tables might not exist yet, that's OK - continue with seeding
+      log("Tables don't exist yet or database empty, proceeding with seeding...");
+    }
+
     if (existingProjects.length > 0) {
       log("Database already seeded, skipping...", "warn");
       return;

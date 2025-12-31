@@ -15,8 +15,23 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
   console.log(`${prefix} [${timestamp}] [DB] ${message}`);
 }
 
+// ========== DETERMINE DATA DIRECTORY ==========
+// In production (Render), use /tmp or an absolute path
+// In development, use local ./data directory
+let dataDir: string;
+
+if (process.env.NODE_ENV === "production") {
+  // Use /tmp for Render (or specify a persistent disk mount point)
+  // If you set up a Render Persistent Disk, change /tmp to /mnt/data
+  dataDir = process.env.DATABASE_PATH || "/tmp/portfolio-db";
+  log(`Production mode: Using database path: ${dataDir}`);
+} else {
+  // Development: use local data directory
+  dataDir = path.resolve(__dirname, "../data");
+  log(`Development mode: Using database path: ${dataDir}`);
+}
+
 // Ensure data directory exists
-const dataDir = path.resolve(__dirname, "../data");
 try {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
