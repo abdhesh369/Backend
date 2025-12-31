@@ -1,4 +1,3 @@
-
 // ============================================================
 // FILE: src/db.ts
 // ============================================================
@@ -14,9 +13,9 @@ function logDb(message: string, level: "info" | "error" | "warn" = "info") {
   console.log(`${prefix} [${timestamp}] [DB] ${message}`);
 }
 
+// ✅ Always use /tmp in production/Render, ./data locally
 let dataDir: string;
-
-if (process.env.NODE_ENV === "production" || process.env.RENDER === "true") {
+if (process.env.NODE_ENV === "production" || process.env.RENDER === "true" || process.env.RENDER_SERVICE_ID) {
   dataDir = "/tmp/portfolio-db";
   console.log(`[DB_INIT] PRODUCTION MODE - Using /tmp`);
 } else {
@@ -26,6 +25,7 @@ if (process.env.NODE_ENV === "production" || process.env.RENDER === "true") {
 
 console.log(`[DB_INIT] Final dataDir: ${dataDir}`);
 
+// Ensure data directory exists
 try {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -36,9 +36,11 @@ try {
   throw error;
 }
 
+// ✅ Database file path
 const dbFile = path.resolve(dataDir, "database.sqlite");
 logDb(`Database file path: ${dbFile}`);
 
+// Initialize SQLite
 let sqliteDb: InstanceType<typeof Database>;
 try {
   sqliteDb = new Database(dbFile, {
@@ -50,6 +52,7 @@ try {
   throw error;
 }
 
+// Configure SQLite pragmas
 try {
   sqliteDb.pragma("journal_mode = WAL");
   sqliteDb.pragma("synchronous = NORMAL");
@@ -63,15 +66,13 @@ try {
   throw error;
 }
 
+// ✅ Export connections
 export const db = drizzle(sqliteDb, { schema });
 export const sqlite: any = sqliteDb;
 export { schema };
 
-export function checkDatabaseHealth(): {
-  healthy: boolean;
-  message: string;
-  details?: any;
-} {
+// Health check
+export function checkDatabaseHealth(): { healthy: boolean; message: string; details?: any } {
   try {
     const result = sqliteDb.prepare("SELECT 1 as health").get();
     if (result && (result as any).health === 1) {
@@ -85,19 +86,13 @@ export function checkDatabaseHealth(): {
         },
       };
     }
-    return {
-      healthy: false,
-      message: "Database query returned unexpected result",
-    };
+    return { healthy: false, message: "Database query returned unexpected result" };
   } catch (error) {
-    return {
-      healthy: false,
-      message: `Database health check failed: ${error}`,
-      details: { error },
-    };
+    return { healthy: false, message: `Database health check failed: ${error}`, details: { error } };
   }
 }
 
+// Graceful shutdown
 export async function closeDatabaseConnection(): Promise<void> {
   try {
     sqliteDb.pragma("wal_checkpoint(TRUNCATE)");
@@ -109,6 +104,7 @@ export async function closeDatabaseConnection(): Promise<void> {
   }
 }
 
+// Backup
 export function createBackup(backupPath?: string): string {
   try {
     const backupDir = backupPath || path.resolve(dataDir, "backups");
@@ -127,12 +123,11 @@ export function createBackup(backupPath?: string): string {
   }
 }
 
+// Clean old backups
 export function cleanOldBackups(keepCount: number = 5): void {
   try {
     const backupDir = path.resolve(dataDir, "backups");
-    if (!fs.existsSync(backupDir)) {
-      return;
-    }
+    if (!fs.existsSync(backupDir)) return;
     const backups = fs
       .readdirSync(backupDir)
       .filter((file) => file.endsWith(".sqlite"))
