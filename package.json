@@ -4,13 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "postinstall": "npm rebuild better-sqlite3",
-    "build": "tsc --project tsconfig.json",
-    "start": "bash start.sh",
-    "migrate": "npx drizzle-kit migrate",
-    "generate": "npx drizzle-kit generate"
-  },
+  "dev": "tsx src/index.ts",
+  "postinstall": "npm rebuild better-sqlite3",
+  "build": "tsc --project tsconfig.json",
+  "start": "node dist/index.js",
+  "migrate": "npx drizzle-kit migrate",
+  "generate": "npx drizzle-kit generate"
+},
   "dependencies": {
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
