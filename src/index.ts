@@ -4,6 +4,7 @@ import cors from "cors";
 import { registerRoutes } from "./routes.js";
 import { seedDatabase } from "./seed.js";
 import { createTables } from "./create-tables.js";
+
 // ------------------- APP SETUP -------------------
 const app = express();
 const httpServer = createServer(app);
