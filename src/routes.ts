@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { z } from "zod";
+import nodemailer from "nodemailer";
 import { api } from "../shared/routes.js";
 import { storage } from "./storage.js";
 import {
@@ -70,14 +71,14 @@ export async function registerRoutes(
     "/api/projects/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid project ID" });
         return;
       }
 
       const project = await storage.getProjectById(id);
-      
+
       if (!project) {
         res.status(404).json({ message: "Project not found" });
         return;
@@ -104,7 +105,7 @@ export async function registerRoutes(
     validateBody(insertProjectApiSchema.partial()),
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid project ID" });
         return;
@@ -121,7 +122,7 @@ export async function registerRoutes(
     "/api/projects/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid project ID" });
         return;
@@ -149,14 +150,14 @@ export async function registerRoutes(
     "/api/skills/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid skill ID" });
         return;
       }
 
       const skill = await storage.getSkillById(id);
-      
+
       if (!skill) {
         res.status(404).json({ message: "Skill not found" });
         return;
@@ -183,7 +184,7 @@ export async function registerRoutes(
     validateBody(insertSkillApiSchema.partial()),
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid skill ID" });
         return;
@@ -200,7 +201,7 @@ export async function registerRoutes(
     "/api/skills/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid skill ID" });
         return;
@@ -228,14 +229,14 @@ export async function registerRoutes(
     "/api/experiences/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid experience ID" });
         return;
       }
 
       const experience = await storage.getExperienceById(id);
-      
+
       if (!experience) {
         res.status(404).json({ message: "Experience not found" });
         return;
@@ -262,7 +263,7 @@ export async function registerRoutes(
     validateBody(insertExperienceApiSchema.partial()),
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid experience ID" });
         return;
@@ -279,7 +280,7 @@ export async function registerRoutes(
     "/api/experiences/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid experience ID" });
         return;
@@ -307,14 +308,14 @@ export async function registerRoutes(
     "/api/messages/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid message ID" });
         return;
       }
 
       const message = await storage.getMessageById(id);
-      
+
       if (!message) {
         res.status(404).json({ message: "Message not found" });
         return;
@@ -331,7 +332,51 @@ export async function registerRoutes(
     asyncHandler(async (req, res) => {
       const message = await storage.createMessage(req.body);
       log(`New message from: ${message.name} (${message.email})`);
-      
+
+      // Email Notification Integration
+      try {
+        if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+          log("Skipping email: GMAIL_USER or GMAIL_APP_PASSWORD not set", "warn");
+        } else {
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.GMAIL_USER,
+              pass: process.env.GMAIL_APP_PASSWORD,
+            },
+          });
+
+          const mailOptions = {
+            from: process.env.GMAIL_USER,
+            to: process.env.GMAIL_USER, // Send to self
+            subject: `Portfolio Message: ${message.subject || "No Subject"}`,
+            text: `
+Name: ${message.name}
+Email: ${message.email}
+Subject: ${message.subject}
+
+Message:
+${message.message}
+            `,
+            html: `
+<h3>New Message from Portfolio</h3>
+<p><strong>Name:</strong> ${message.name}</p>
+<p><strong>Email:</strong> ${message.email}</p>
+<p><strong>Subject:</strong> ${message.subject}</p>
+<hr/>
+<p><strong>Message:</strong></p>
+<p style="white-space: pre-wrap;">${message.message}</p>
+            `,
+          };
+
+          await transporter.sendMail(mailOptions);
+          log("Email notification sent successfully");
+        }
+      } catch (emailError) {
+        log(`Failed to send email notification: ${emailError}`, "error");
+        // We do not fail the request if email fails, as the message is saved in DB
+      }
+
       res.status(201).json({
         success: true,
         message: "Message sent successfully! We'll get back to you soon.",
@@ -345,7 +390,7 @@ export async function registerRoutes(
     "/api/messages/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
-      
+
       if (isNaN(id)) {
         res.status(400).json({ message: "Invalid message ID" });
         return;
