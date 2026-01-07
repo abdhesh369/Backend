@@ -1,13 +1,13 @@
 # Portfolio Backend
 
-A robust and scalable backend for a personal portfolio website, built with Node.js, Express, and TypeScript. It features a science-fiction minimalist HUD-style API and integrates with SQLite using Drizzle ORM.
+A robust and scalable backend for a personal portfolio website, built with Node.js, Express, and TypeScript. It features a science-fiction minimalist HUD-style API and integrates with MySQL using Drizzle ORM.
 
 ## 🚀 Technologies
 
 - **Runtime**: Node.js
 - **Language**: TypeScript
 - **Framework**: Express.js
-- **Database**: SQLite (via `better-sqlite3`)
+- **Database**: MySQL (via `mysql2`)
 - **ORM**: Drizzle ORM
 - **Validation**: Zod
 - **Email**: Nodemailer (Gmail integration)
@@ -16,7 +16,6 @@ A robust and scalable backend for a personal portfolio website, built with Node.
 ## 📁 Project Structure
 
 ```text
-├── data/               # SQLite database storage
 ├── shared/             # Shared logic between Frontend & Backend
 │   ├── routes.ts       # Central API route definitions
 │   └── schema.ts       # Drizzle & Zod schemas
@@ -61,7 +60,13 @@ Create a `.env` file in the root directory:
 
 ```env
 PORT=5000
-DATABASE_URL=data/sqlite.db
+# Database (MySQL)
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=portfolio
+
 FRONTEND_URL=http://localhost:5173
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
