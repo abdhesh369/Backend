@@ -5,6 +5,8 @@ import cors from "cors";
 import { registerRoutes } from "./routes.js";
 import { seedDatabase } from "./seed.js";
 import { createTables } from "./create-tables.js";
+import { checkDatabaseHealth } from "./db.js";
+import { setStorage, MemStorage } from "./storage.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -118,18 +120,34 @@ async function startServer() {
   try {
     log("Starting server...", "startup");
 
-    // STEP 1: CREATE TABLES (MUST BE FIRST)
-    log("📍 Creating database tables...", "startup");
-    await createTables();
-    log("✓ Tables created successfully", "startup");
+    // STEP 0: CHECK DATABASE HEALTH
+    log("📍 Checking database health...", "startup");
+    const health = await checkDatabaseHealth();
+    let useFallback = false;
 
-    // STEP 2: SEED DATABASE
-    log("📍 Seeding database...", "startup");
+    if (!health.healthy) {
+      log("⚠️ Database connection failed. Switching to In-Memory Fallback...", "startup");
+      log(`Reason: ${health.message}`, "warn");
+      setStorage(new MemStorage());
+      useFallback = true;
+    } else {
+      log("✓ Database is healthy", "startup");
+    }
+
+    if (!useFallback) {
+      // STEP 1: CREATE TABLES (ONLY FOR REAL DB)
+      log("📍 Creating database tables...", "startup");
+      await createTables();
+      log("✓ Tables created successfully", "startup");
+    }
+
+    // STEP 2: SEED DATABASE (Works for both DB and Memory)
+    log(`📍 Seeding ${useFallback ? 'In-Memory' : 'Database'}...`, "startup");
     try {
       await seedDatabase();
-      log("✓ Database seeding complete", "startup");
+      log("✓ Seeding complete", "startup");
     } catch (err) {
-      log("⚠️ Seed failed (continuing anyway)", "startup");
+      log(`⚠️ Seeding failed: ${err}`, "startup");
     }
 
     // STEP 3: REGISTER ROUTES

@@ -1,18 +1,18 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { mysqlTable, varchar, int, text } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // ================= DATABASE TABLES =================
 
-export const projectsTable = sqliteTable("projects", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  title: text("title").notNull(),
+export const projectsTable = mysqlTable("projects", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
-  techStack: text("techStack").notNull().default("[]"), // JSON string array
-  imageUrl: text("imageUrl").notNull(),
-  githubUrl: text("githubUrl"),
-  liveUrl: text("liveUrl"),
-  category: text("category").notNull(),
+  techStack: text("techStack").notNull(), // JSON string array
+  imageUrl: varchar("imageUrl", { length: 500 }).notNull(),
+  githubUrl: varchar("githubUrl", { length: 500 }),
+  liveUrl: varchar("liveUrl", { length: 500 }),
+  category: varchar("category", { length: 100 }).notNull(),
   problemStatement: text("problemStatement"),
   motivation: text("motivation"),
   systemDesign: text("systemDesign"),
@@ -20,29 +20,29 @@ export const projectsTable = sqliteTable("projects", {
   learnings: text("learnings"),
 });
 
-export const skillsTable = sqliteTable("skills", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  category: text("category").notNull(),
-  icon: text("icon").notNull().default("Code"),
+export const skillsTable = mysqlTable("skills", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 100 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  icon: varchar("icon", { length: 100 }).notNull().default("Code"),
 });
 
-export const experiencesTable = sqliteTable("experiences", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  role: text("role").notNull(),
-  organization: text("organization").notNull(),
-  period: text("period").notNull(),
+export const experiencesTable = mysqlTable("experiences", {
+  id: int("id").primaryKey().autoincrement(),
+  role: varchar("role", { length: 200 }).notNull(),
+  organization: varchar("organization", { length: 200 }).notNull(),
+  period: varchar("period", { length: 100 }).notNull(),
   description: text("description").notNull(),
-  type: text("type").notNull().default("Experience"),
+  type: varchar("type", { length: 100 }).notNull().default("Experience"),
 });
 
-export const messagesTable = sqliteTable("messages", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  subject: text("subject").notNull().default(""),
+export const messagesTable = mysqlTable("messages", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull().default(""),
   message: text("message").notNull(),
-  createdAt: text("createdAt")
+  createdAt: varchar("createdAt", { length: 100 })
     .notNull()
     .default(new Date().toISOString()),
 });
