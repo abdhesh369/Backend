@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { z } from "zod";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { api } from "../shared/routes.js";
 import { storage } from "./storage.js";
 import {
@@ -393,35 +393,20 @@ export async function registerRoutes(
       // Email Notification Integration (Fire-and-forget)
       (async () => {
         try {
-          if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-            log("Skipping email: GMAIL_USER or GMAIL_APP_PASSWORD not set", "warn");
+          if (!process.env.RESEND_API_KEY) {
+            log("Skipping email: RESEND_API_KEY not set", "warn");
             return;
           }
 
-          const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465, // Try SMTPS
-            secure: true, // Use SSL/TLS
-            auth: {
-              user: process.env.GMAIL_USER,
-              pass: process.env.GMAIL_APP_PASSWORD,
-            },
-            connectionTimeout: 10000, // 10 seconds
-            greetingTimeout: 10000,   // 10 seconds
-          });
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          // For free tier, 'from' must be 'onboarding@resend.dev'
+          // 'to' must be the verified email (user's email)
+          const targetEmail = "abdheshshah111@gmail.com";
 
-          const mailOptions = {
-            from: process.env.GMAIL_USER,
-            to: process.env.GMAIL_USER, // Send to self
+          const { data, error } = await resend.emails.send({
+            from: "onboarding@resend.dev",
+            to: targetEmail,
             subject: `Portfolio Message: ${message.subject || "No Subject"}`,
-            text: `
-Name: ${message.name}
-Email: ${message.email}
-Subject: ${message.subject}
-
-Message:
-${message.message}
-            `,
             html: `
 <h3>New Message from Portfolio</h3>
 <p><strong>Name:</strong> ${message.name}</p>
@@ -431,10 +416,13 @@ ${message.message}
 <p><strong>Message:</strong></p>
 <p style="white-space: pre-wrap;">${message.message}</p>
             `,
-          };
+          });
 
-          await transporter.sendMail(mailOptions);
-          log("Email notification sent successfully");
+          if (error) {
+            log(`Failed to send email notification: ${error.message}`, "error");
+          } else {
+            log(`Email notification sent successfully. ID: ${data?.id}`);
+          }
 
         } catch (emailError) {
           log(`Failed to send email notification: ${emailError}`, "error");
