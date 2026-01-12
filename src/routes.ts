@@ -381,11 +381,21 @@ export async function registerRoutes(
       const message = await storage.createMessage(req.body);
       log(`New message from: ${message.name} (${message.email})`);
 
-      // Email Notification Integration
-      try {
-        if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-          log("Skipping email: GMAIL_USER or GMAIL_APP_PASSWORD not set", "warn");
-        } else {
+      // Send response immediately to prevent UI blocking
+      res.status(201).json({
+        success: true,
+        message: "Message sent! We'll get back to you soon.",
+        data: message,
+      });
+
+      // Email Notification Integration (Fire-and-forget)
+      (async () => {
+        try {
+          if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+            log("Skipping email: GMAIL_USER or GMAIL_APP_PASSWORD not set", "warn");
+            return;
+          }
+
           const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -419,17 +429,11 @@ ${message.message}
 
           await transporter.sendMail(mailOptions);
           log("Email notification sent successfully");
-        }
-      } catch (emailError) {
-        log(`Failed to send email notification: ${emailError}`, "error");
-        // We do not fail the request if email fails, as the message is saved in DB
-      }
 
-      res.status(201).json({
-        success: true,
-        message: "Message sent successfully! We'll get back to you soon.",
-        data: message,
-      });
+        } catch (emailError) {
+          log(`Failed to send email notification: ${emailError}`, "error");
+        }
+      })();
     })
   );
 
