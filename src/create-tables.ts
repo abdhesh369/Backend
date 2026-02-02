@@ -36,7 +36,20 @@ export async function createTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         category VARCHAR(100) NOT NULL,
-        icon VARCHAR(100) NOT NULL DEFAULT 'Code'
+        status VARCHAR(100) NOT NULL DEFAULT 'Core',
+        icon VARCHAR(100) NOT NULL DEFAULT 'Code',
+        description TEXT,
+        proof TEXT,
+        x FLOAT NOT NULL DEFAULT 50,
+        y FLOAT NOT NULL DEFAULT 50
+      )`
+    );
+
+    await connection.query(
+      `CREATE TABLE IF NOT EXISTS skill_connections (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        from_skill_id VARCHAR(100) NOT NULL,
+        to_skill_id VARCHAR(100) NOT NULL
       )`
     );
 
@@ -58,7 +71,17 @@ export async function createTables() {
         email VARCHAR(255) NOT NULL,
         subject VARCHAR(500) NOT NULL DEFAULT '',
         message TEXT NOT NULL,
-        createdAt VARCHAR(100) NOT NULL
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+
+    await connection.query(
+      `CREATE TABLE IF NOT EXISTS mindset (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        icon VARCHAR(100) NOT NULL DEFAULT 'Brain',
+        tags TEXT NOT NULL
       )`
     );
 

@@ -85,14 +85,6 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.get("/healthz", (_req, res) => {
-  res.status(200).json({
-    ok: true,
-    environment: process.env.NODE_ENV || "development",
-    timestamp: new Date().toISOString(),
-  });
-});
-
 function setupGracefulShutdown() {
   const shutdown = (signal: string) => {
     log(`${signal} received, shutting down...`, "shutdown");

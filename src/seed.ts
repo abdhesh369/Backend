@@ -134,26 +134,22 @@ export async function seedDatabase() {
     logSeed(`Projects: ${successCount} processed (${successCount - (projectList.length - failCount)} updated, ${projectList.length - failCount} created/synced), ${failCount} failed`);
 
     const skillList = [
-      { name: "C", category: "Languages", icon: "Code" },
-      { name: "C++", category: "Languages", icon: "Code2" },
-      { name: "Python", category: "Languages", icon: "Snake" },
-      { name: "JavaScript", category: "Languages", icon: "FileJson" },
-      { name: "TypeScript", category: "Languages", icon: "FileCode" },
-      { name: "HTML5", category: "Web", icon: "Layout" },
-      { name: "CSS3", category: "Web", icon: "Palette" },
-      { name: "React", category: "Web", icon: "Component" },
-      { name: "Node.js", category: "Web", icon: "Server" },
-      { name: "Express", category: "Web", icon: "Route" },
-      { name: "TailwindCSS", category: "Web", icon: "Paintbrush" },
-      { name: "SQL", category: "Database", icon: "Database" },
-      { name: "MySQL", category: "Database", icon: "Database" },
-      { name: "Git", category: "Tools", icon: "GitBranch" },
-      { name: "GitHub", category: "Tools", icon: "Github" },
-      { name: "Data Structures", category: "Core", icon: "Binary" },
-      { name: "Algorithms", category: "Core", icon: "Cpu" },
-      { name: "OOP", category: "Core", icon: "Box" },
-      { name: "8085 Microprocessor", category: "Hardware", icon: "Chip" },
-      { name: "Digital Electronics", category: "Hardware", icon: "CircuitBoard" },
+      // Foundations
+      { name: "C", category: "Foundations", icon: "Terminal", status: "Core", x: 20, y: 20, description: "System programming language", proof: "Academic coursework" },
+      { name: "C++", category: "Foundations", icon: "Code2", status: "Core", x: 50, y: 18, description: "Object-oriented programming", proof: "Academic coursework" },
+      { name: "Python", category: "Foundations", icon: "Terminal", status: "Core", x: 80, y: 20, description: "General-purpose language", proof: "Project Edith, AI Study Buddy" },
+      // Frontend
+      { name: "HTML", category: "Frontend", icon: "Globe", status: "Core", x: 30, y: 45, description: "Web structure", proof: "All web projects" },
+      { name: "CSS", category: "Frontend", icon: "Layers", status: "Core", x: 50, y: 45, description: "Web styling", proof: "All web projects" },
+      { name: "JavaScript", category: "Frontend", icon: "Zap", status: "Core", x: 70, y: 45, description: "Web scripting", proof: "All web projects" },
+      { name: "React", category: "Frontend", icon: "Code2", status: "Core", x: 70, y: 60, description: "Frontend library", proof: "Portfolio Website" },
+      // Backend
+      { name: "Node.js", category: "Backend", icon: "Server", status: "Comfortable", x: 40, y: 70, description: "Server-side runtime", proof: "Portfolio Backend" },
+      { name: "Express", category: "Backend", icon: "Terminal", status: "Comfortable", x: 60, y: 70, description: "Web framework", proof: "Portfolio Backend" },
+      { name: "MySQL", category: "Backend", icon: "Database", status: "Comfortable", x: 50, y: 85, description: "Relational database", proof: "Portfolio Backend" },
+      // Tools
+      { name: "Git", category: "Tools", icon: "GitBranch", status: "Core", x: 15, y: 60, description: "Version control", proof: "All projects" },
+      { name: "GitHub", category: "Tools", icon: "GitBranch", status: "Core", x: 30, y: 70, description: "Code hosting", proof: "All projects" },
     ];
 
     successCount = 0;
@@ -171,6 +167,56 @@ export async function seedDatabase() {
     }
 
     logSeed(`Skills: ${successCount} succeeded, ${failCount} failed`);
+
+    // Add Skill Connections
+    const connections = [
+      { fromSkillId: "C", toSkillId: "C++" },
+      { fromSkillId: "HTML", toSkillId: "CSS" },
+      { fromSkillId: "CSS", toSkillId: "JavaScript" },
+      { fromSkillId: "JavaScript", toSkillId: "React" },
+      { fromSkillId: "Git", toSkillId: "GitHub" },
+      { fromSkillId: "Node.js", toSkillId: "Express" },
+      { fromSkillId: "Express", toSkillId: "MySQL" },
+    ];
+
+    for (const conn of connections) {
+      try {
+        await storage2.createSkillConnection(conn);
+        logSeed(`Seeded connection: ${conn.fromSkillId} -> ${conn.toSkillId}`);
+      } catch (err) {
+        logSeed(`Failed to seed connection: ${err}`, "error");
+      }
+    }
+
+    const mindsetList = [
+      {
+        title: "Occam's Razor",
+        description: "The simplest explanation is usually the best. Applied to code: avoid over-engineering and keep solutions as simple as possible.",
+        icon: "Brain",
+        tags: ["Architecture", "Simplicity"]
+      },
+      {
+        title: "The DRY Principle",
+        description: "Don't Repeat Yourself. Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.",
+        icon: "Zap",
+        tags: ["Refactoring", "Efficiency"]
+      },
+      {
+        title: "Growth Mindset",
+        description: "Viewing challenges as opportunities to learn rather than obstacles. Documentation and failures are just data points for improvement.",
+        icon: "Cpu",
+        tags: ["Learning", "Resilience"]
+      }
+    ];
+
+    for (const mindset of mindsetList) {
+      try {
+        await storage2.createMindset(mindset);
+        logSeed(`Seeded mindset: ${mindset.title}`);
+      } catch (err) {
+        logSeed(`Failed to seed mindset: ${err}`, "error");
+      }
+    }
 
     const experienceList = [
       {

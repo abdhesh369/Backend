@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage.js";
-import { insertExperienceApiSchema } from "../../shared/schema.js";
-import { api } from "../../shared/routes.js";
+import { insertExperienceApiSchema } from "@shared/schema.js";
+import { api } from "@shared/routes.js";
 
 function validateBody<T extends z.ZodType>(schema: T) {
     return (req: any, res: any, next: any): void => {

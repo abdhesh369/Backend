@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { storage } from "../storage.js";
-import { api } from "../../shared/routes.js";
+import { api } from "@shared/routes.js";
 
 function asyncHandler(fn: (req: any, res: any, next: any) => Promise<any>) {
     return (req: any, res: any, next: any): void => {

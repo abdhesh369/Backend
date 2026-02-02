@@ -1,29 +1,14 @@
 import { z } from "zod";
-import {
-    projectSchema,
-    skillSchema,
-    skillConnectionSchema,
-    experienceSchema,
-    messageSchema,
-    mindsetSchema,
-    insertProjectApiSchema,
-    insertSkillApiSchema,
-    insertExperienceApiSchema,
-    insertMessageApiSchema,
-} from "./schema.js";
-
+import { projectSchema, skillSchema, skillConnectionSchema, experienceSchema, messageSchema, mindsetSchema, insertProjectApiSchema, insertSkillApiSchema, insertExperienceApiSchema, insertMessageApiSchema, } from "./schema.js";
 // ==================== ERROR SCHEMAS ====================
-
 export const errorSchemas = {
     validation: z.object({
         message: z.string(),
         errors: z
-            .array(
-                z.object({
-                    path: z.string(),
-                    message: z.string(),
-                })
-            )
+            .array(z.object({
+            path: z.string(),
+            message: z.string(),
+        }))
             .optional(),
     }),
     badRequest: z.object({
@@ -42,23 +27,18 @@ export const errorSchemas = {
         message: z.string(),
     }),
 };
-
 // ==================== SHARED RESPONSE SCHEMAS ====================
-
-const createSuccessResponse = <T extends z.ZodTypeAny>(dataSchema: T) =>
-    z.object({
-        success: z.boolean(),
-        message: z.string(),
-        data: dataSchema,
-    });
-
+const createSuccessResponse = (dataSchema) => z.object({
+    success: z.boolean(),
+    message: z.string(),
+    data: dataSchema,
+});
 // ==================== API DEFINITION ====================
-
 export const api = {
     // ---------- PROJECTS ----------
     projects: {
         list: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/projects",
             description: "List all projects (public)",
             responses: {
@@ -67,7 +47,7 @@ export const api = {
             },
         },
         get: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/projects/:id",
             description: "Get single project by ID (public)",
             responses: {
@@ -78,7 +58,7 @@ export const api = {
             },
         },
         create: {
-            method: "POST" as const,
+            method: "POST",
             path: "/api/projects",
             description: "Create new project (admin only)",
             input: insertProjectApiSchema,
@@ -92,7 +72,7 @@ export const api = {
             },
         },
         update: {
-            method: "PUT" as const,
+            method: "PUT",
             path: "/api/projects/:id",
             description: "Update project by ID (admin only)",
             input: insertProjectApiSchema.partial(),
@@ -107,7 +87,7 @@ export const api = {
             },
         },
         delete: {
-            method: "DELETE" as const,
+            method: "DELETE",
             path: "/api/projects/:id",
             description: "Delete project by ID (admin only)",
             requiresAuth: true,
@@ -121,11 +101,10 @@ export const api = {
             },
         },
     },
-
     // ---------- SKILLS ----------
     skills: {
         list: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/skills",
             description: "List all skills (public, cached)",
             responses: {
@@ -134,7 +113,7 @@ export const api = {
             },
         },
         connections: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/skills/connections",
             description: "List all skill connections (public)",
             responses: {
@@ -143,7 +122,7 @@ export const api = {
             },
         },
         get: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/skills/:id",
             description: "Get single skill by ID (public)",
             responses: {
@@ -154,7 +133,7 @@ export const api = {
             },
         },
         create: {
-            method: "POST" as const,
+            method: "POST",
             path: "/api/skills",
             description: "Create new skill (admin only)",
             input: insertSkillApiSchema,
@@ -168,7 +147,7 @@ export const api = {
             },
         },
         update: {
-            method: "PUT" as const,
+            method: "PUT",
             path: "/api/skills/:id",
             description: "Update skill by ID (admin only)",
             input: insertSkillApiSchema.partial(),
@@ -183,7 +162,7 @@ export const api = {
             },
         },
         delete: {
-            method: "DELETE" as const,
+            method: "DELETE",
             path: "/api/skills/:id",
             description: "Delete skill by ID (admin only)",
             requiresAuth: true,
@@ -197,11 +176,10 @@ export const api = {
             },
         },
     },
-
     // ---------- MINDSET ----------
     mindset: {
         list: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/mindset",
             description: "List all engineering mindset principles (public)",
             responses: {
@@ -210,7 +188,7 @@ export const api = {
             },
         },
         get: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/mindset/:id",
             description: "Get single mindset principle by ID (public)",
             responses: {
@@ -221,11 +199,10 @@ export const api = {
             },
         },
     },
-
     // ---------- EXPERIENCES ----------
     experiences: {
         list: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/experiences",
             description: "List all experiences (public, cached)",
             responses: {
@@ -234,7 +211,7 @@ export const api = {
             },
         },
         get: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/experiences/:id",
             description: "Get single experience by ID (public)",
             responses: {
@@ -245,7 +222,7 @@ export const api = {
             },
         },
         create: {
-            method: "POST" as const,
+            method: "POST",
             path: "/api/experiences",
             description: "Create new experience (admin only)",
             input: insertExperienceApiSchema,
@@ -259,7 +236,7 @@ export const api = {
             },
         },
         update: {
-            method: "PUT" as const,
+            method: "PUT",
             path: "/api/experiences/:id",
             description: "Update experience by ID (admin only)",
             input: insertExperienceApiSchema.partial(),
@@ -274,7 +251,7 @@ export const api = {
             },
         },
         delete: {
-            method: "DELETE" as const,
+            method: "DELETE",
             path: "/api/experiences/:id",
             description: "Delete experience by ID (admin only)",
             requiresAuth: true,
@@ -288,11 +265,10 @@ export const api = {
             },
         },
     },
-
     // ---------- MESSAGES ----------
     messages: {
         list: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/messages",
             description: "List all messages (admin only)",
             requiresAuth: true,
@@ -304,7 +280,7 @@ export const api = {
             },
         },
         get: {
-            method: "GET" as const,
+            method: "GET",
             path: "/api/messages/:id",
             description: "Get single message by ID (admin only)",
             requiresAuth: true,
@@ -318,7 +294,7 @@ export const api = {
             },
         },
         create: {
-            method: "POST" as const,
+            method: "POST",
             path: "/api/messages",
             description: "Submit contact form (public, rate-limited)",
             input: insertMessageApiSchema,
@@ -332,7 +308,7 @@ export const api = {
             },
         },
         delete: {
-            method: "DELETE" as const,
+            method: "DELETE",
             path: "/api/messages/:id",
             description: "Delete message by ID (admin only)",
             requiresAuth: true,
@@ -347,5 +323,3 @@ export const api = {
         },
     },
 };
-
-export type Api = typeof api;
