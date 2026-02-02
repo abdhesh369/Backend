@@ -21,7 +21,7 @@ import {
   type InsertProject,
   type InsertSkill,
   type InsertExperience,
-} from "../shared/schema.js";
+} from "@shared/schema.js";
 
 // ================= STORAGE INTERFACE =================
 export interface IStorage {
@@ -106,7 +106,12 @@ function transformSkill(dbSkill: any): Skill {
     id: dbSkill.id,
     name: dbSkill.name ?? "",
     category: dbSkill.category ?? "",
-    icon: dbSkill.icon ?? "",
+    status: dbSkill.status ?? "Core",
+    icon: dbSkill.icon ?? "Code",
+    description: dbSkill.description ?? "",
+    proof: dbSkill.proof ?? "",
+    x: Number(dbSkill.x ?? 50),
+    y: Number(dbSkill.y ?? 50),
   };
 }
 
@@ -141,6 +146,7 @@ function transformMindset(dbMindset: any): Mindset {
     tags: safeJsonParse<string[]>(dbMindset.tags, []),
   };
 }
+
 
 // ================= MEMORY STORAGE =================
 export class MemStorage implements IStorage {
@@ -293,6 +299,7 @@ export class MemStorage implements IStorage {
     this.mindset.set(id, newMindset);
     return newMindset;
   }
+
 }
 
 // ================= DATABASE STORAGE =================
@@ -788,6 +795,7 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
 }
 
 // ================= DYNAMIC EXPORT =================

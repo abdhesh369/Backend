@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage.js";
-import { insertSkillApiSchema } from "../../shared/schema.js";
-import { api } from "../../shared/routes.js";
+import { insertSkillApiSchema } from "@shared/schema.js";
+import { api } from "@shared/routes.js";
 
 // Validation middleware factory
 function validateBody<T extends z.ZodType>(schema: T) {
