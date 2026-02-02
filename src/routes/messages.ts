@@ -3,8 +3,8 @@ import { z } from "zod";
 import { Resend } from "resend";
 import rateLimit from "express-rate-limit";
 import { storage } from "../storage.js";
-import { insertMessageApiSchema } from "@shared/schema.js";
-import { api } from "@shared/routes.js";
+import { insertMessageApiSchema } from "../../shared/schema.js";
+import { api } from "../../shared/routes.js";
 import { env } from "../env.js";
 
 // Rate Limiter: max 5 requests per 15 minutes

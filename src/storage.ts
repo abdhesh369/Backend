@@ -21,7 +21,7 @@ import {
   type InsertProject,
   type InsertSkill,
   type InsertExperience,
-} from "@shared/schema.js";
+} from "../shared/schema.js";
 
 // ================= STORAGE INTERFACE =================
 export interface IStorage {

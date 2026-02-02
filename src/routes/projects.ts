@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage.js";
-import { insertProjectApiSchema } from "@shared/schema.js";
-import { api } from "@shared/routes.js";
+import { insertProjectApiSchema } from "../../shared/schema.js";
+import { api } from "../../shared/routes.js";
 
 const router = Router();
 

@@ -19,11 +19,6 @@
     "rootDir": ".", // ✅ source root
     "moduleResolution": "node",
     "baseUrl": ".",
-    "paths": {
-      "@shared/*": [
-        "./shared/*"
-      ]
-    },
     "declaration": false,
     "declarationMap": false
   },
