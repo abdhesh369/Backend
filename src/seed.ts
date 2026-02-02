@@ -2,6 +2,7 @@
 // FILE: src/seed.ts
 // ============================================================
 import { storage as storage2 } from "./storage.js";
+import type { Project } from "../shared/schema.js";
 
 function logSeed(message: string, level: "info" | "error" | "warn" = "info") {
   const timestamp = new Date().toISOString();
@@ -11,7 +12,7 @@ function logSeed(message: string, level: "info" | "error" | "warn" = "info") {
 
 export async function seedDatabase() {
   try {
-    let existingProjects: any[] = [];
+    let existingProjects: Project[] = [];
     try {
       existingProjects = await storage2.getProjects();
     } catch (err) {
