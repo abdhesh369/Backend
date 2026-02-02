@@ -154,7 +154,7 @@ async function startServer() {
 
     // STEP 4: GLOBAL ERROR HANDLER
     app.use(
-      (err: any, _req: Request, res: Response, _next: NextFunction) => {
+      (err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
         const status = err.status || err.statusCode || 500;
         const message = err.message || "Internal Server Error";
         log(`Error ${status}: ${message}`, "error");

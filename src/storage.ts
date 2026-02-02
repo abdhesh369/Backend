@@ -369,7 +369,7 @@ export class DatabaseStorage implements IStorage {
           techStack: JSON.stringify(project.techStack ?? []),
         });
 
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       const inserted = await this.getProjectById(insertedId);
 
       if (!inserted) throw new Error("Failed to fetch inserted project");
@@ -384,7 +384,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateProject(id: number, project: Partial<InsertProject>): Promise<Project> {
     try {
-      const updates: any = { ...project };
+      const updates: Record<string, any> = { ...project };
       if (project.techStack) {
         updates.techStack = JSON.stringify(project.techStack);
       }
@@ -482,7 +482,7 @@ export class DatabaseStorage implements IStorage {
           icon: skill.icon || "Code",
         });
 
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       const inserted = await this.getSkillById(insertedId);
 
       if (!inserted) throw new Error("Failed to fetch inserted skill");
@@ -595,7 +595,7 @@ export class DatabaseStorage implements IStorage {
           type: exp.type || "Experience",
         });
 
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       const inserted = await this.getExperienceById(insertedId);
 
       if (!inserted) throw new Error("Failed to fetch inserted experience");
@@ -698,7 +698,7 @@ export class DatabaseStorage implements IStorage {
         .insert(messagesTable)
         .values(sanitized);
 
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       const inserted = await this.getMessageById(insertedId);
 
       if (!inserted) throw new Error("Failed to fetch inserted message");
@@ -746,7 +746,7 @@ export class DatabaseStorage implements IStorage {
         fromSkillId: connection.fromSkillId,
         toSkillId: connection.toSkillId,
       });
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       return { ...connection, id: insertedId } as SkillConnection;
     } catch (error) {
       logStorage(`Failed to create skill connection: ${error}`, "error");
@@ -786,7 +786,7 @@ export class DatabaseStorage implements IStorage {
         icon: mindset.icon,
         tags: JSON.stringify(mindset.tags),
       });
-      const insertedId = (result as any).insertId;
+      const insertedId = (result as { insertId: number }).insertId;
       const inserted = await this.getMindsetById(insertedId);
       if (!inserted) throw new Error("Failed to fetch inserted mindset");
       return inserted;
