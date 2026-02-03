@@ -6,6 +6,7 @@ import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
 import { registerRoutes } from "./routes.js";
+import compression from "compression";
 import { seedDatabase } from "./seed.js";
 import { createTables } from "./create-tables.js";
 import { checkDatabaseHealth } from "./db.js";
@@ -37,6 +38,8 @@ const allowedOrigins = [
   "https://www.abdheshsah.com.np",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
+
+app.use(compression());
 
 app.use(
   cors({
