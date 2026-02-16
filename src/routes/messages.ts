@@ -111,11 +111,12 @@ export function registerMessageRoutes(app: Router) {
                     }
 
                     const resend = new Resend(env.RESEND_API_KEY);
-                    // For free tier, 'from' must be 'onboarding@resend.dev'
+                    
+                    // The verified domain is now used as the sender
                     const targetEmail = "abdheshshah111@gmail.com";
 
                     const { data, error } = await resend.emails.send({
-                        from: "onboarding@resend.dev",
+                        from: "contact@abdheshsah.com.np",
                         to: targetEmail,
                         subject: `Portfolio Message: ${escapeHtml(message.subject || "No Subject")}`,
                         html: `
