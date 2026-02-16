@@ -6,6 +6,7 @@ import { registerMessageRoutes } from "./routes/messages.js";
 import { registerMindsetRoutes } from "./routes/mindset.js";
 import { authRoutes } from "./routes/auth.js";
 import { registerUploadRoutes } from "./routes/upload.js";
+import { registerAnalyticsRoutes } from "./routes/analytics.js";
 
 export function registerRoutes(app: Express) {
   const router = app; // Express app can be used as a router
@@ -17,4 +18,5 @@ export function registerRoutes(app: Express) {
   registerMessageRoutes(router);
   registerMindsetRoutes(router);
   registerUploadRoutes(router);
+  registerAnalyticsRoutes(router);
 }

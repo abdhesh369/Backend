@@ -11,16 +11,19 @@ import {
   messagesTable,
   mindsetTable,
   skillConnectionsTable,
+  analyticsTable,
   type Project,
   type Skill,
   type SkillConnection,
   type Experience,
   type Message,
   type Mindset,
+  type Analytics,
   type InsertMessage,
   type InsertProject,
   type InsertSkill,
   type InsertExperience,
+  type InsertAnalytics,
 } from "../shared/schema.js";
 
 // ================= STORAGE INTERFACE =================
@@ -65,6 +68,10 @@ export interface IStorage {
   getMindset(): Promise<Mindset[]>;
   getMindsetById(id: number): Promise<Mindset | null>;
   createMindset(mindset: Omit<Mindset, "id">): Promise<Mindset>;
+
+  // Analytics
+  logAnalyticsEvent(event: InsertAnalytics): Promise<Analytics>;
+  getAnalyticsSummary(): Promise<any>;
 }
 
 function logStorage(message: string, level: "info" | "error" | "warn" = "info") {
@@ -151,6 +158,21 @@ function transformMindset(dbMindset: any): Mindset {
     description: dbMindset.description ?? "",
     icon: dbMindset.icon ?? "Brain",
     tags: safeJsonParse<string[]>(dbMindset.tags, []),
+  };
+}
+
+function transformAnalytics(dbAnalytics: any): Analytics {
+  return {
+    id: dbAnalytics.id,
+    type: dbAnalytics.type ?? "",
+    targetId: dbAnalytics.targetId ?? null,
+    path: dbAnalytics.path ?? "",
+    browser: dbAnalytics.browser ?? null,
+    os: dbAnalytics.os ?? null,
+    device: dbAnalytics.device ?? null,
+    country: dbAnalytics.country ?? null,
+    city: dbAnalytics.city ?? null,
+    createdAt: dbAnalytics.createdAt ?? new Date().toISOString(),
   };
 }
 
@@ -335,6 +357,29 @@ export class MemStorage implements IStorage {
     const newMindset: Mindset = { ...mindset, id };
     this.mindset.set(id, newMindset);
     return newMindset;
+  }
+
+  async logAnalyticsEvent(event: InsertAnalytics): Promise<Analytics> {
+    const id = this.currentIds.analytics || 1;
+    this.currentIds.analytics = id + 1;
+    const newEvent: Analytics = {
+      ...event,
+      id,
+      createdAt: new Date().toISOString(),
+    } as Analytics;
+    // We don't necessarily need to store this in memory for long-term, 
+    // but let's keep a small log if needed.
+    return newEvent;
+  }
+
+  async getAnalyticsSummary(): Promise<any> {
+    return {
+      totalViews: 0,
+      viewsByDate: [],
+      mostViewedProjects: [],
+      devices: [],
+      locations: [],
+    };
   }
 
 }
@@ -899,6 +944,34 @@ export class DatabaseStorage implements IStorage {
       return inserted;
     } catch (error) {
       logStorage(`Failed to create mindset: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async logAnalyticsEvent(event: InsertAnalytics): Promise<Analytics> {
+    try {
+      const [result] = await db2.insert(analyticsTable).values(event);
+      const insertedId = (result as { insertId: number }).insertId;
+      return { ...event, id: insertedId, createdAt: new Date().toISOString() } as Analytics;
+    } catch (error) {
+      logStorage(`Failed to log analytics event: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async getAnalyticsSummary(): Promise<any> {
+    try {
+      // Basic summary logic - can be expanded
+      const allEvents = await db2.select().from(analyticsTable);
+
+      return {
+        totalViews: allEvents.filter(e => e.type === 'page_view').length,
+        // Aggregation logic would go here
+        // For now returning basic stats
+        events: allEvents.length
+      };
+    } catch (error) {
+      logStorage(`Failed to get analytics summary: ${error}`, "error");
       throw error;
     }
   }

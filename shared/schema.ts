@@ -66,6 +66,19 @@ export const mindsetTable = mysqlTable("mindset", {
   tags: json("tags").notNull(),
 });
 
+export const analyticsTable = mysqlTable("analytics", {
+  id: int("id").primaryKey().autoincrement(),
+  type: varchar("type", { length: 50 }).notNull(), // page_view, project_view, contact_form
+  targetId: int("targetId"), // ID of project for project_view
+  path: varchar("path", { length: 500 }).notNull(),
+  browser: varchar("browser", { length: 100 }),
+  os: varchar("os", { length: 100 }),
+  device: varchar("device", { length: 50 }), // mobile, desktop
+  country: varchar("country", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ================= DRIZZLE-ZOD BASE SCHEMAS =================
 
 export const selectProjectSchema = createSelectSchema(projectsTable);
@@ -202,6 +215,30 @@ export const insertMessageApiSchema = z.object({
   message: z.string().min(1).max(5000),
 });
 
+export const analyticsSchema = z.object({
+  id: z.number(),
+  type: z.string().max(50),
+  targetId: z.number().nullable().optional(),
+  path: z.string().max(500),
+  browser: z.string().max(100).nullable().optional(),
+  os: z.string().max(100).nullable().optional(),
+  device: z.string().max(50).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  createdAt: z.string(),
+});
+
+export const insertAnalyticsSchema = z.object({
+  type: z.string().max(50),
+  targetId: z.number().nullable().optional(),
+  path: z.string().max(500),
+  browser: z.string().max(100).nullable().optional(),
+  os: z.string().max(100).nullable().optional(),
+  device: z.string().max(50).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+});
+
 // ================= TYPESCRIPT TYPES =================
 
 export type Project = z.infer<typeof projectSchema>;
@@ -210,11 +247,13 @@ export type SkillConnection = z.infer<typeof skillConnectionSchema>;
 export type Experience = z.infer<typeof experienceSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type Mindset = z.infer<typeof mindsetSchema>;
+export type Analytics = z.infer<typeof analyticsSchema>;
 
 export type InsertProject = z.infer<typeof insertProjectApiSchema>;
 export type InsertSkill = z.infer<typeof insertSkillApiSchema>;
 export type InsertExperience = z.infer<typeof insertExperienceApiSchema>;
 export type InsertMessage = z.infer<typeof insertMessageApiSchema>;
+export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 
 // ================= TYPE GUARDS =================
 
