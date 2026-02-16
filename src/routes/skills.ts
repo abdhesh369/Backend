@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../storage.js";
 import { insertSkillApiSchema } from "../../shared/schema.js";
 import { api } from "../../shared/routes.js";
+import { isAuthenticated } from "../auth.js";
 
 // Validation middleware factory
 function validateBody<T extends z.ZodType>(schema: T) {
@@ -74,6 +75,7 @@ export function registerSkillRoutes(app: Router) {
     // POST /api/skills - Create skill
     app.post(
         "/api/skills",
+        isAuthenticated,
         validateBody(insertSkillApiSchema),
         asyncHandler(async (req, res) => {
             const skill = await storage.createSkill(req.body);
@@ -84,6 +86,7 @@ export function registerSkillRoutes(app: Router) {
     // PUT /api/skills/:id - Update skill
     app.put(
         "/api/skills/:id",
+        isAuthenticated,
         validateBody(insertSkillApiSchema.partial()),
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -99,6 +102,7 @@ export function registerSkillRoutes(app: Router) {
     // DELETE /api/skills/:id - Delete skill
     app.delete(
         "/api/skills/:id",
+        isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {

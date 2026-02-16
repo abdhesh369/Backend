@@ -11,6 +11,7 @@ import { seedDatabase } from "./seed.js";
 import { createTables } from "./create-tables.js";
 import { checkDatabaseHealth } from "./db.js";
 import { setStorage, MemStorage } from "./storage.js";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const httpServer = createServer(app);
@@ -41,6 +42,16 @@ const allowedOrigins = [
 
 app.use(compression());
 
+// Global Rate Limiter: Baseline protection for all API routes
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: { message: "Too many requests from this IP, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", globalLimiter);
+
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -59,7 +70,16 @@ app.use(
 
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "script-src": ["'self'", "https://www.googletagmanager.com"],
+        "connect-src": ["'self'", "https://www.google-analytics.com"],
+        "img-src": ["'self'", "data:", "https:", "http:"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+      },
+    },
     strictTransportSecurity: {
       maxAge: 31536000,
       includeSubDomains: true,

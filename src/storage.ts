@@ -479,7 +479,12 @@ export class DatabaseStorage implements IStorage {
         .values({
           name: skill.name,
           category: skill.category,
+          status: skill.status || "Core",
           icon: skill.icon || "Code",
+          description: skill.description || "",
+          proof: skill.proof || "",
+          x: skill.x ?? 50,
+          y: skill.y ?? 50,
         });
 
       const insertedId = (result as { insertId: number }).insertId;

@@ -8,8 +8,9 @@ const envSchema = z.object({
     MYSQL_PASSWORD: z.string().optional(),
     MYSQL_DATABASE: z.string().optional(),
     MYSQL_PORT: z.string().default("3306"),
-    RESEND_API_KEY: z.string().optional(), // Optional for dev, but warned if missing
+    RESEND_API_KEY: z.string().optional(),
     FRONTEND_URL: z.string().optional(),
+    ADMIN_API_KEY: z.string().min(1).default("dev-secret-key-123"),
 });
 
 export type Env = z.infer<typeof envSchema>;

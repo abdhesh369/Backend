@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../storage.js";
 import { insertExperienceApiSchema } from "../../shared/schema.js";
 import { api } from "../../shared/routes.js";
+import { isAuthenticated } from "../auth.js";
 
 function validateBody<T extends z.ZodType>(schema: T) {
     return (req: Request, res: Response, next: NextFunction): void => {
@@ -62,6 +63,7 @@ export function registerExperienceRoutes(app: Router) {
     // POST /api/experiences - Create experience
     app.post(
         "/api/experiences",
+        isAuthenticated,
         validateBody(insertExperienceApiSchema),
         asyncHandler(async (req, res) => {
             const experience = await storage.createExperience(req.body);
@@ -72,6 +74,7 @@ export function registerExperienceRoutes(app: Router) {
     // PUT /api/experiences/:id - Update experience
     app.put(
         "/api/experiences/:id",
+        isAuthenticated,
         validateBody(insertExperienceApiSchema.partial()),
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -87,6 +90,7 @@ export function registerExperienceRoutes(app: Router) {
     // DELETE /api/experiences/:id - Delete experience
     app.delete(
         "/api/experiences/:id",
+        isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {

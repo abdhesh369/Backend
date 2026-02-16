@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../storage.js";
 import { insertProjectApiSchema } from "../../shared/schema.js";
 import { api } from "../../shared/routes.js";
+import { isAuthenticated } from "../auth.js";
 
 const router = Router();
 
@@ -66,6 +67,7 @@ export function registerProjectRoutes(app: Router) {
   // POST /api/projects - Create project
   app.post(
     "/api/projects",
+    isAuthenticated,
     validateBody(insertProjectApiSchema),
     asyncHandler(async (req, res) => {
       const project = await storage.createProject(req.body);
@@ -76,6 +78,7 @@ export function registerProjectRoutes(app: Router) {
   // PUT /api/projects/:id - Update project
   app.put(
     "/api/projects/:id",
+    isAuthenticated,
     validateBody(insertProjectApiSchema.partial()),
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
@@ -91,6 +94,7 @@ export function registerProjectRoutes(app: Router) {
   // DELETE /api/projects/:id - Delete project
   app.delete(
     "/api/projects/:id",
+    isAuthenticated,
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {

@@ -6,6 +6,17 @@ import { storage } from "../storage.js";
 import { insertMessageApiSchema } from "../../shared/schema.js";
 import { api } from "../../shared/routes.js";
 import { env } from "../env.js";
+import { isAuthenticated } from "../auth.js";
+
+// Simple HTML escaping helper to prevent XSS in email templates
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 // Rate Limiter: max 5 requests per 15 minutes
 const contactFormLimiter = rateLimit({
@@ -53,9 +64,10 @@ function log(message: string, level: "info" | "error" | "warn" = "info") {
 }
 
 export function registerMessageRoutes(app: Router) {
-    // GET /api/messages - List all messages (admin only in production)
+    // GET /api/messages - List all messages (admin only)
     app.get(
         "/api/messages",
+        isAuthenticated,
         asyncHandler(async (_req, res) => {
             const messages = await storage.getMessages();
             res.json(messages);
@@ -65,6 +77,7 @@ export function registerMessageRoutes(app: Router) {
     // GET /api/messages/:id - Get single message
     app.get(
         "/api/messages/:id",
+        isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
@@ -111,15 +124,15 @@ export function registerMessageRoutes(app: Router) {
                     const { data, error } = await resend.emails.send({
                         from: "onboarding@resend.dev",
                         to: targetEmail,
-                        subject: `Portfolio Message: ${message.subject || "No Subject"}`,
+                        subject: `Portfolio Message: ${escapeHtml(message.subject || "No Subject")}`,
                         html: `
 <h3>New Message from Portfolio</h3>
-<p><strong>Name:</strong> ${message.name}</p>
-<p><strong>Email:</strong> ${message.email}</p>
-<p><strong>Subject:</strong> ${message.subject}</p>
+<p><strong>Name:</strong> ${escapeHtml(message.name)}</p>
+<p><strong>Email:</strong> ${escapeHtml(message.email)}</p>
+<p><strong>Subject:</strong> ${escapeHtml(message.subject || "")}</p>
 <hr/>
 <p><strong>Message:</strong></p>
-<p style="white-space: pre-wrap;">${message.message}</p>
+<p style="white-space: pre-wrap;">${escapeHtml(message.message)}</p>
             `,
                     });
 
@@ -139,6 +152,7 @@ export function registerMessageRoutes(app: Router) {
     // DELETE /api/messages/:id - Delete message
     app.delete(
         "/api/messages/:id",
+        isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
