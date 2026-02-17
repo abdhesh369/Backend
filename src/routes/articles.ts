@@ -40,6 +40,7 @@ articlesRouter.post("/", async (req, res) => {
         res.status(201).json(article);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            console.error("Zod Validation Error (POST /api/articles):", error.errors);
             res.status(400).json({ error: error.errors });
         } else {
             res.status(500).json({ error: "Failed to create article" });
@@ -60,6 +61,7 @@ articlesRouter.patch("/:id", async (req, res) => {
         res.json(article);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            console.error("Zod Validation Error (PATCH /api/articles/:id):", error.errors);
             res.status(400).json({ error: error.errors });
         } else {
             console.error(error);
