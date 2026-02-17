@@ -104,6 +104,30 @@ export const seoSettingsTable = mysqlTable("seo_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
 });
 
+export const articlesTable = mysqlTable("articles", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  featuredImage: varchar("featuredImage", { length: 500 }),
+  status: varchar("status", { length: 50 }).notNull().default("draft"),
+  publishedAt: timestamp("publishedAt"),
+  viewCount: int("viewCount").notNull().default(0),
+  readTimeMinutes: int("readTimeMinutes").notNull().default(0),
+  metaTitle: varchar("metaTitle", { length: 255 }),
+  metaDescription: text("metaDescription"),
+  authorId: int("authorId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().onUpdateNow(),
+});
+
+export const articleTagsTable = mysqlTable("article_tags", {
+  id: int("id").primaryKey().autoincrement(),
+  articleId: int("articleId").notNull(),
+  tag: varchar("tag", { length: 100 }).notNull(),
+});
+
 // ================= DRIZZLE-ZOD BASE SCHEMAS =================
 
 export const selectProjectSchema = createSelectSchema(projectsTable);
@@ -129,6 +153,12 @@ export const insertEmailTemplateSchema = createInsertSchema(emailTemplatesTable)
 
 export const selectSeoSettingsSchema = createSelectSchema(seoSettingsTable);
 export const insertSeoSettingsSchema = createInsertSchema(seoSettingsTable);
+
+export const selectArticleSchema = createSelectSchema(articlesTable);
+export const insertArticleSchema = createInsertSchema(articlesTable);
+
+export const selectArticleTagSchema = createSelectSchema(articleTagsTable);
+export const insertArticleTagSchema = createInsertSchema(articleTagsTable);
 
 // ================= CUSTOM API SCHEMAS =================
 
@@ -313,6 +343,40 @@ export const insertSeoSettingsApiSchema = z.object({
   twitterCard: z.string().default("summary_large_image"),
 });
 
+export const articleSchema = z.object({
+  id: z.number(),
+  title: z.string().min(1).max(255),
+  slug: z.string().min(1).max(255),
+  content: z.string().min(1),
+  excerpt: z.string().nullable().optional(),
+  featuredImage: z.string().url().max(500).nullable().optional(),
+  status: z.enum(["draft", "published", "archived"]).default("draft"),
+  publishedAt: z.string().nullable().optional(),
+  viewCount: z.number().default(0),
+  readTimeMinutes: z.number().default(0),
+  metaTitle: z.string().max(255).nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  authorId: z.number().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const insertArticleApiSchema = z.object({
+  title: z.string().min(1).max(255),
+  slug: z.string().max(255).optional(),
+  content: z.string().min(1),
+  excerpt: z.string().nullable().optional(),
+  featuredImage: z.string().url().max(500).nullable().optional(),
+  status: z.enum(["draft", "published", "archived"]).default("draft"),
+  publishedAt: z.string().nullable().optional(),
+  readTimeMinutes: z.number().default(0),
+  metaTitle: z.string().max(255).nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const updateArticleApiSchema = insertArticleApiSchema.partial();
+
 // ================= TYPESCRIPT TYPES =================
 
 export type Project = z.infer<typeof projectSchema>;
@@ -324,6 +388,7 @@ export type Mindset = z.infer<typeof mindsetSchema>;
 export type Analytics = z.infer<typeof analyticsSchema>;
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
 export type SeoSettings = z.infer<typeof seoSettingsSchema>;
+export type Article = z.infer<typeof articleSchema>;
 
 export type InsertProject = z.infer<typeof insertProjectApiSchema>;
 export type InsertSkill = z.infer<typeof insertSkillApiSchema>;
@@ -332,6 +397,7 @@ export type InsertMessage = z.infer<typeof insertMessageApiSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateApiSchema>;
 export type InsertSeoSettings = z.infer<typeof insertSeoSettingsApiSchema>;
+export type InsertArticle = z.infer<typeof insertArticleApiSchema>;
 
 // ================= TYPE GUARDS =================
 

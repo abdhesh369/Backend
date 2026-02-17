@@ -1419,7 +1419,7 @@ export class DatabaseStorage implements IStorage {
       // Handle Tags
       if (tags && tags.length > 0) {
         await db2.insert(articleTagsTable).values(
-          tags.map(tag => ({
+          tags.map((tag: string) => ({
             articleId: insertedId,
             tag
           }))
