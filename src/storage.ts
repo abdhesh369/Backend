@@ -2,7 +2,7 @@
 // ============================================================
 // FILE: src/storage.ts
 // ============================================================
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc, desc, inArray } from "drizzle-orm";
 import { db as db2 } from "./db.js";
 import {
   projectsTable,
@@ -1344,7 +1344,7 @@ export class DatabaseStorage implements IStorage {
   async getArticles(status?: string): Promise<Article[]> {
     try {
       const start = Date.now();
-      let query = db2.select().from(articlesTable).orderBy(asc(articlesTable.createdAt));
+      let query = db2.select().from(articlesTable).orderBy(desc(articlesTable.createdAt));
 
       if (status) {
         // @ts-ignore - Status inference might be tricky
