@@ -1,4 +1,4 @@
-import { mysqlTable, text, int, varchar, timestamp, json, float } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, int, varchar, timestamp, json, float, boolean } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -87,6 +87,23 @@ export const emailTemplatesTable = mysqlTable("email_templates", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+
+export const seoSettingsTable = mysqlTable("seo_settings", {
+  id: int("id").primaryKey().autoincrement(),
+  pageSlug: varchar("page_slug", { length: 100 }).notNull().unique(),
+  metaTitle: varchar("meta_title", { length: 60 }).notNull(),
+  metaDescription: text("meta_description").notNull(),
+  ogTitle: varchar("og_title", { length: 255 }),
+  ogDescription: text("og_description"),
+  ogImage: varchar("og_image", { length: 500 }),
+  keywords: text("keywords"),
+  canonicalUrl: varchar("canonical_url", { length: 500 }),
+  noindex: boolean("noindex").default(false),
+  twitterCard: varchar("twitter_card", { length: 50 }).default("summary_large_image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
+});
+
 // ================= DRIZZLE-ZOD BASE SCHEMAS =================
 
 export const selectProjectSchema = createSelectSchema(projectsTable);
@@ -106,6 +123,12 @@ export const insertMessageSchema = createInsertSchema(messagesTable);
 
 export const selectMindsetSchema = createSelectSchema(mindsetTable);
 export const insertMindsetSchema = createInsertSchema(mindsetTable);
+
+export const selectEmailTemplateSchema = createSelectSchema(emailTemplatesTable);
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplatesTable);
+
+export const selectSeoSettingsSchema = createSelectSchema(seoSettingsTable);
+export const insertSeoSettingsSchema = createInsertSchema(seoSettingsTable);
 
 // ================= CUSTOM API SCHEMAS =================
 
@@ -261,10 +284,34 @@ export const insertEmailTemplateApiSchema = z.object({
   body: z.string().min(1).max(10000),
 });
 
-// ================= DATABASE SELECT/INSERT SCHEMAS =================
+export const seoSettingsSchema = z.object({
+  id: z.number(),
+  pageSlug: z.string().min(1).max(100),
+  metaTitle: z.string().min(1).max(60),
+  metaDescription: z.string().min(1).max(160),
+  ogTitle: z.string().max(255).nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().url().max(500).nullable().optional(),
+  keywords: z.string().nullable().optional(),
+  canonicalUrl: z.string().url().max(500).nullable().optional(),
+  noindex: z.boolean().default(false),
+  twitterCard: z.string().default("summary_large_image"),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const selectEmailTemplateSchema = createSelectSchema(emailTemplatesTable);
-export const insertEmailTemplateSchema = createInsertSchema(emailTemplatesTable);
+export const insertSeoSettingsApiSchema = z.object({
+  pageSlug: z.string().min(1).max(100),
+  metaTitle: z.string().min(1).max(60),
+  metaDescription: z.string().min(1).max(160),
+  ogTitle: z.string().max(255).nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().url().max(500).nullable().optional(),
+  keywords: z.string().nullable().optional(),
+  canonicalUrl: z.string().url().max(500).nullable().optional(),
+  noindex: z.boolean().default(false),
+  twitterCard: z.string().default("summary_large_image"),
+});
 
 // ================= TYPESCRIPT TYPES =================
 
@@ -276,6 +323,7 @@ export type Message = z.infer<typeof messageSchema>;
 export type Mindset = z.infer<typeof mindsetSchema>;
 export type Analytics = z.infer<typeof analyticsSchema>;
 export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
+export type SeoSettings = z.infer<typeof seoSettingsSchema>;
 
 export type InsertProject = z.infer<typeof insertProjectApiSchema>;
 export type InsertSkill = z.infer<typeof insertSkillApiSchema>;
@@ -283,6 +331,7 @@ export type InsertExperience = z.infer<typeof insertExperienceApiSchema>;
 export type InsertMessage = z.infer<typeof insertMessageApiSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateApiSchema>;
+export type InsertSeoSettings = z.infer<typeof insertSeoSettingsApiSchema>;
 
 // ================= TYPE GUARDS =================
 
@@ -304,3 +353,7 @@ export function isMindset(obj: unknown): obj is Mindset {
 export function isEmailTemplate(obj: unknown): obj is EmailTemplate {
   return emailTemplateSchema.safeParse(obj).success;
 }
+export function isSeoSettings(obj: unknown): obj is SeoSettings {
+  return seoSettingsSchema.safeParse(obj).success;
+}
+

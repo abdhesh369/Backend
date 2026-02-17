@@ -8,6 +8,9 @@ import { authRoutes } from "./routes/auth.js";
 import { registerUploadRoutes } from "./routes/upload.js";
 import { registerAnalyticsRoutes } from "./routes/analytics.js";
 import { registerEmailTemplateRoutes } from "./routes/email-templates.js";
+import seoRoutes from "./routes/seo.js";
+import sitemapRoutes from "./routes/sitemap.js";
+import { articlesRouter } from "./routes/articles.js";
 
 export function registerRoutes(app: Express) {
   const router = app; // Express app can be used as a router
@@ -21,4 +24,7 @@ export function registerRoutes(app: Express) {
   registerUploadRoutes(router);
   registerAnalyticsRoutes(router);
   registerEmailTemplateRoutes(router);
+  router.use("/api", seoRoutes);
+  router.use("/api", sitemapRoutes);
+  router.use("/api/articles", articlesRouter);
 }

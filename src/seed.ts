@@ -2,7 +2,7 @@
 // FILE: src/seed.ts
 // ============================================================
 import { storage as storage2 } from "./storage.js";
-import type { Project, InsertProject } from "../shared/schema.js";
+import type { Project, InsertProject, InsertSeoSettings } from "../shared/schema.js";
 
 function logSeed(message: string, level: "info" | "error" | "warn" = "info") {
   const timestamp = new Date().toISOString();
@@ -289,6 +289,50 @@ export async function seedDatabase() {
         logSeed(`Seeded email template: ${template.name}`);
       } catch (err) {
         logSeed(`Failed to seed email template: ${template.name} - ${err}`, "error");
+      }
+    }
+
+    const seoSettings: InsertSeoSettings[] = [
+      {
+        pageSlug: "home",
+        metaTitle: "Abdhesh Sah | Full Stack Developer",
+        metaDescription: "Portfolio of Abdhesh Sah, a Full Stack Developer specializing in React, Node.js, and modern web technologies.",
+        keywords: "Abdhesh Sah, Full Stack Developer, React, Node.js, Portfolio, Web Development",
+        noindex: false,
+        twitterCard: "summary_large_image",
+      },
+      {
+        pageSlug: "projects",
+        metaTitle: "Projects | Abdhesh Sah",
+        metaDescription: "Explore the projects built by Abdhesh Sah, showcasing skills in full-stack development, AI, and automation.",
+        keywords: "Projects, Web Development, Case Studies, Portfolio Work",
+        noindex: false,
+        twitterCard: "summary_large_image",
+      },
+      {
+        pageSlug: "about",
+        metaTitle: "About Me | Abdhesh Sah",
+        metaDescription: "Learn more about Abdhesh Sah, his background, education, and journey as a self-taught developer.",
+        keywords: "About Abdhesh, Biography, Developer Journey, Skills",
+        noindex: false,
+        twitterCard: "summary_large_image",
+      },
+      {
+        pageSlug: "contact",
+        metaTitle: "Contact | Abdhesh Sah",
+        metaDescription: "Get in touch with Abdhesh Sah for collaborations, freelance work, or just to say hi.",
+        keywords: "Contact, Hire Developer, Freelance, Collaboration",
+        noindex: false,
+        twitterCard: "summary_large_image",
+      },
+    ];
+
+    for (const settings of seoSettings) {
+      try {
+        await storage2.createSeoSettings(settings);
+        logSeed(`Seeded SEO settings for: ${settings.pageSlug}`);
+      } catch (err) {
+        logSeed(`Failed to seed SEO settings for: ${settings.pageSlug} - ${err}`, "error");
       }
     }
 

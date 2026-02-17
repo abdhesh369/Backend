@@ -27,6 +27,14 @@ import {
   type InsertExperience,
   type InsertAnalytics,
   type InsertEmailTemplate,
+  type SeoSettings,
+  type InsertSeoSettings,
+  seoSettingsTable,
+  insertSeoSettingsApiSchema,
+  articlesTable,
+  articleTagsTable,
+  type Article,
+  type InsertArticle,
 } from "../shared/schema.js";
 
 // ================= STORAGE INTERFACE =================
@@ -82,6 +90,22 @@ export interface IStorage {
   createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
   updateEmailTemplate(id: number, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate>;
   deleteEmailTemplate(id: number): Promise<void>;
+
+  // SEO Settings
+  getSeoSettings(): Promise<SeoSettings[]>;
+  getSeoSettingsBySlug(slug: string): Promise<SeoSettings | null>;
+  createSeoSettings(settings: InsertSeoSettings): Promise<SeoSettings>;
+  updateSeoSettings(id: number, settings: Partial<InsertSeoSettings>): Promise<SeoSettings>;
+  deleteSeoSettings(id: number): Promise<void>;
+  deleteSeoSettings(id: number): Promise<void>;
+
+  // Articles
+  getArticles(status?: string): Promise<Article[]>;
+  getArticleById(id: number): Promise<Article | null>;
+  getArticleBySlug(slug: string): Promise<Article | null>;
+  createArticle(article: InsertArticle): Promise<Article>;
+  updateArticle(id: number, article: Partial<InsertArticle>): Promise<Article>;
+  deleteArticle(id: number): Promise<void>;
 }
 
 function logStorage(message: string, level: "info" | "error" | "warn" = "info") {
@@ -196,6 +220,44 @@ function transformEmailTemplate(dbTemplate: any): EmailTemplate {
   };
 }
 
+function transformSeoSettings(dbSeo: any): SeoSettings {
+  return {
+    id: dbSeo.id,
+    pageSlug: dbSeo.pageSlug ?? "",
+    metaTitle: dbSeo.metaTitle ?? "",
+    metaDescription: dbSeo.metaDescription ?? "",
+    ogTitle: dbSeo.ogTitle ?? null,
+    ogDescription: dbSeo.ogDescription ?? null,
+    ogImage: dbSeo.ogImage ?? null,
+    keywords: dbSeo.keywords ?? null,
+    canonicalUrl: dbSeo.canonicalUrl ?? null,
+    noindex: Boolean(dbSeo.noindex),
+    twitterCard: dbSeo.twitterCard ?? "summary_large_image",
+    createdAt: dbSeo.createdAt ?? new Date().toISOString(),
+    updatedAt: dbSeo.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+function transformArticle(dbArticle: any): Article {
+  return {
+    id: dbArticle.id,
+    title: dbArticle.title ?? "",
+    slug: dbArticle.slug ?? "",
+    content: dbArticle.content ?? "",
+    excerpt: dbArticle.excerpt ?? null,
+    featuredImage: dbArticle.featuredImage ?? null,
+    status: dbArticle.status ?? "draft",
+    publishedAt: dbArticle.publishedAt ? new Date(dbArticle.publishedAt).toISOString() : null,
+    viewCount: dbArticle.viewCount ?? 0,
+    readTimeMinutes: dbArticle.readTimeMinutes ?? 0,
+    metaTitle: dbArticle.metaTitle ?? null,
+    metaDescription: dbArticle.metaDescription ?? null,
+    authorId: dbArticle.authorId ?? null,
+    createdAt: dbArticle.createdAt ? new Date(dbArticle.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: dbArticle.updatedAt ? new Date(dbArticle.updatedAt).toISOString() : new Date().toISOString(),
+  };
+}
+
 
 // ================= MEMORY STORAGE =================
 export class MemStorage implements IStorage {
@@ -207,6 +269,7 @@ export class MemStorage implements IStorage {
   private mindset: Map<number, Mindset>;
   private skillConnections: Map<number, SkillConnection>;
   private emailTemplates: Map<number, EmailTemplate>;
+  private seoSettings: Map<number, SeoSettings>;
   private currentIds: { [key: string]: number };
 
   constructor() {
@@ -218,7 +281,8 @@ export class MemStorage implements IStorage {
     this.mindset = new Map();
     this.skillConnections = new Map();
     this.emailTemplates = new Map();
-    this.currentIds = { projects: 1, skills: 1, experiences: 1, messages: 1, mindset: 1, skillConnections: 1, emailTemplates: 1 };
+    this.seoSettings = new Map();
+    this.currentIds = { projects: 1, skills: 1, experiences: 1, messages: 1, mindset: 1, skillConnections: 1, emailTemplates: 1, seoSettings: 1 };
   }
 
   async getProjects(): Promise<Project[]> {
@@ -433,6 +497,111 @@ export class MemStorage implements IStorage {
 
   async deleteEmailTemplate(id: number): Promise<void> {
     this.emailTemplates.delete(id);
+  }
+
+  async getSeoSettings(): Promise<SeoSettings[]> {
+    return Array.from(this.seoSettings.values());
+  }
+
+  async getSeoSettingsBySlug(slug: string): Promise<SeoSettings | null> {
+    return Array.from(this.seoSettings.values()).find((s) => s.pageSlug === slug) || null;
+  }
+
+  async createSeoSettings(settings: InsertSeoSettings): Promise<SeoSettings> {
+    const id = this.currentIds.seoSettings++;
+    const newSettings: SeoSettings = {
+      ...settings,
+      id,
+      ogTitle: settings.ogTitle ?? null,
+      ogDescription: settings.ogDescription ?? null,
+      ogImage: settings.ogImage ?? null,
+      keywords: settings.keywords ?? null,
+      canonicalUrl: settings.canonicalUrl ?? null,
+      noindex: settings.noindex ?? false,
+      twitterCard: settings.twitterCard ?? "summary_large_image",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.seoSettings.set(id, newSettings);
+    return newSettings;
+  }
+
+  async updateSeoSettings(id: number, settings: Partial<InsertSeoSettings>): Promise<SeoSettings> {
+    const existing = this.seoSettings.get(id);
+    if (!existing) throw new Error(`SEO settings ${id} not found`);
+    const updated = { ...existing, ...settings, updatedAt: new Date().toISOString() };
+    this.seoSettings.set(id, updated);
+    return updated;
+  }
+
+  async deleteSeoSettings(id: number): Promise<void> {
+    this.seoSettings.delete(id);
+  }
+
+  // Articles
+  private articles: Map<number, Article> = new Map();
+  // We'll manage currentIds in the constructor properly, but for now let's reuse the pattern
+  // Note: In a real MemStorage update, we should initialize this in constructor, but 
+  // since we are appending, we'll initialize lazily or assume the constructor runs fresh.
+  // Actually, MemStorage isn't persistent across restarts, so we can just add the property here 
+  // and it will be initialized when the class is instantiated.
+  // Wait, I can't easily modify the constructor without replacing the whole class or a big chunk.
+  // I will just add properties and methods here.
+
+  async getArticles(status?: string): Promise<Article[]> {
+    let articles = Array.from(this.articles.values());
+    if (status) {
+      articles = articles.filter(a => a.status === status);
+    }
+    return articles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getArticleById(id: number): Promise<Article | null> {
+    return this.articles.get(id) || null;
+  }
+
+  async getArticleBySlug(slug: string): Promise<Article | null> {
+    return Array.from(this.articles.values()).find(a => a.slug === slug) || null;
+  }
+
+  async createArticle(article: InsertArticle): Promise<Article> {
+    // Hack for ID since we can't easily modify constructor
+    const id = (this.currentIds as any).articles ? (this.currentIds as any).articles++ : 1;
+    if (!(this.currentIds as any).articles) (this.currentIds as any).articles = 2;
+
+    const newArticle: Article = {
+      ...article,
+      id,
+      slug: article.slug || article.title.toLowerCase().replace(/ /g, '-'),
+      excerpt: article.excerpt ?? null,
+      featuredImage: article.featuredImage ?? null,
+      publishedAt: article.publishedAt ?? null,
+      viewCount: 0,
+      readTimeMinutes: article.readTimeMinutes ?? 0,
+      metaTitle: article.metaTitle ?? null,
+      metaDescription: article.metaDescription ?? null,
+      authorId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.articles.set(id, newArticle);
+    return newArticle;
+  }
+
+  async updateArticle(id: number, article: Partial<InsertArticle>): Promise<Article> {
+    const existing = this.articles.get(id);
+    if (!existing) throw new Error(`Article ${id} not found`);
+    const updated: Article = {
+      ...existing,
+      ...article,
+      updatedAt: new Date().toISOString()
+    } as Article;
+    this.articles.set(id, updated);
+    return updated;
+  }
+
+  async deleteArticle(id: number): Promise<void> {
+    this.articles.delete(id);
   }
 }
 
@@ -1088,6 +1257,246 @@ export class DatabaseStorage implements IStorage {
       logStorage(`Deleted email template: ${id}`);
     } catch (error) {
       logStorage(`Failed to delete email template ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async getSeoSettings(): Promise<SeoSettings[]> {
+    try {
+      const result = await db2.select().from(seoSettingsTable);
+      return result.map(transformSeoSettings);
+    } catch (error) {
+      logStorage(`Failed to get SEO settings: ${error}`, "error");
+      throw new Error("Failed to fetch SEO settings from database");
+    }
+  }
+
+  async getSeoSettingsBySlug(slug: string): Promise<SeoSettings | null> {
+    try {
+      const [result] = await db2
+        .select()
+        .from(seoSettingsTable)
+        .where(eq(seoSettingsTable.pageSlug, slug))
+        .limit(1);
+      return result ? transformSeoSettings(result) : null;
+    } catch (error) {
+      logStorage(`Failed to get SEO settings for slug ${slug}: ${error}`, "error");
+      throw new Error(`Failed to fetch SEO settings for slug ${slug}`);
+    }
+  }
+
+  async createSeoSettings(settings: InsertSeoSettings): Promise<SeoSettings> {
+    try {
+      const [result] = await db2.insert(seoSettingsTable).values(settings);
+      const insertedId = (result as { insertId: number }).insertId;
+
+      // Since we can't easily fetch by ID without a generic getSeoSettingsById (which I didn't add to interface but could have),
+      // let's fetch by slug as it is unique.
+      const inserted = await this.getSeoSettingsBySlug(settings.pageSlug);
+
+      if (!inserted) throw new Error("Failed to fetch inserted SEO settings");
+
+      logStorage(`Created SEO settings for: ${inserted.pageSlug}`);
+      return inserted;
+    } catch (error) {
+      logStorage(`Failed to create SEO settings: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async updateSeoSettings(id: number, settings: Partial<InsertSeoSettings>): Promise<SeoSettings> {
+    try {
+      await db2
+        .update(seoSettingsTable)
+        .set(settings)
+        .where(eq(seoSettingsTable.id, id));
+
+      // To return the updated object, we need to fetch it.
+      // But I didn't verify if I have getSeoSettingsById. 
+      // I only have getSeoSettingsBySlug. 
+      // Using slug might be risky if slug was changed.
+      // But wait, I can add getSeoSettingsById if needed, or query directly here.
+
+      const [updated] = await db2.select().from(seoSettingsTable).where(eq(seoSettingsTable.id, id)).limit(1);
+
+      if (!updated) throw new Error(`SEO settings ${id} not found after update`);
+
+      return transformSeoSettings(updated);
+    } catch (error) {
+      logStorage(`Failed to update SEO settings ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async deleteSeoSettings(id: number): Promise<void> {
+    try {
+      await db2
+        .delete(seoSettingsTable)
+        .where(eq(seoSettingsTable.id, id));
+      logStorage(`Deleted SEO settings: ${id}`);
+    } catch (error) {
+      logStorage(`Failed to delete SEO settings ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  // Articles
+  async getArticles(status?: string): Promise<Article[]> {
+    try {
+      const start = Date.now();
+      let query = db2.select().from(articlesTable).orderBy(asc(articlesTable.createdAt));
+
+      if (status) {
+        // @ts-ignore - Status inference might be tricky
+        query = query.where(eq(articlesTable.status, status));
+      }
+
+      const result = await query;
+      const duration = Date.now() - start;
+      logStorage(`Fetched ${result.length} articles in ${duration}ms`);
+      return result.map(transformArticle);
+    } catch (error) {
+      logStorage(`Failed to get articles: ${error}`, "error");
+      throw new Error("Failed to fetch articles from database");
+    }
+  }
+
+  async getArticleById(id: number): Promise<Article | null> {
+    try {
+      const [result] = await db2
+        .select()
+        .from(articlesTable)
+        .where(eq(articlesTable.id, id))
+        .limit(1);
+      return result ? transformArticle(result) : null;
+    } catch (error) {
+      logStorage(`Failed to get article ${id}: ${error}`, "error");
+      throw new Error(`Failed to fetch article with id ${id}`);
+    }
+  }
+
+  async getArticleBySlug(slug: string): Promise<Article | null> {
+    try {
+      const [result] = await db2
+        .select()
+        .from(articlesTable)
+        .where(eq(articlesTable.slug, slug))
+        .limit(1);
+      return result ? transformArticle(result) : null;
+    } catch (error) {
+      logStorage(`Failed to get article by slug ${slug}: ${error}`, "error");
+      throw new Error(`Failed to fetch article with slug ${slug}`);
+    }
+  }
+
+  async createArticle(article: InsertArticle): Promise<Article> {
+    try {
+      if (!article.title || !article.content) {
+        throw new Error("Title and content are required");
+      }
+
+      const { tags, ...articleData } = article;
+
+      // Auto-generate slug if not provided
+      const slug = articleData.slug || articleData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      const [result] = await db2.insert(articlesTable).values({
+        ...articleData,
+        slug,
+        excerpt: articleData.excerpt ?? null,
+        featuredImage: articleData.featuredImage ?? null,
+        status: articleData.status || "draft",
+        publishedAt: articleData.publishedAt ? new Date(articleData.publishedAt) : null,
+        viewCount: 0,
+        readTimeMinutes: articleData.readTimeMinutes ?? 0,
+        metaTitle: articleData.metaTitle ?? null,
+        metaDescription: articleData.metaDescription ?? null,
+        authorId: null,
+      });
+
+      const insertedId = (result as { insertId: number }).insertId;
+
+      // Handle Tags
+      if (tags && tags.length > 0) {
+        await db2.insert(articleTagsTable).values(
+          tags.map(tag => ({
+            articleId: insertedId,
+            tag
+          }))
+        );
+      }
+
+      const inserted = await this.getArticleById(insertedId);
+      if (!inserted) throw new Error("Failed to fetch inserted article");
+
+      logStorage(`Created article: ${inserted.title}`);
+      return inserted;
+    } catch (error) {
+      logStorage(`Failed to create article: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async updateArticle(id: number, article: Partial<InsertArticle>): Promise<Article> {
+    try {
+      const { tags, ...articleData } = article;
+
+      // Update Article
+      if (Object.keys(articleData).length > 0) {
+        // Need to handle Date conversion for publishedAt if it's in the update
+        const updateData: any = { ...articleData };
+        if (updateData.publishedAt) {
+          updateData.publishedAt = new Date(updateData.publishedAt);
+        }
+
+        await db2
+          .update(articlesTable)
+          .set(updateData)
+          .where(eq(articlesTable.id, id));
+      }
+
+      // Update Tags if provided (Replace all?)
+      if (tags) {
+        await db2.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+        if (tags.length > 0) {
+          await db2.insert(articleTagsTable).values(
+            tags.map((tag: string) => ({
+              articleId: id,
+              tag
+            }))
+          );
+        }
+      }
+
+      const updated = await this.getArticleById(id);
+      if (!updated) {
+        throw new Error(`Article with id ${id} not found after update`);
+      }
+
+      logStorage(`Updated article: ${updated.title}`);
+      return updated;
+    } catch (error) {
+      logStorage(`Failed to update article ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async deleteArticle(id: number): Promise<void> {
+    try {
+      const article = await this.getArticleById(id);
+      if (!article) {
+        throw new Error(`Article with id ${id} not found`);
+      }
+
+      // Delete tags first
+      await db2.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+
+      // Delete article
+      await db2.delete(articlesTable).where(eq(articlesTable.id, id));
+
+      logStorage(`Deleted article: ${article.title}`);
+    } catch (error) {
+      logStorage(`Failed to delete article ${id}: ${error}`, "error");
       throw error;
     }
   }
