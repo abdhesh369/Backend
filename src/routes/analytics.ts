@@ -7,9 +7,9 @@ import { z } from "zod";
 const router = Router();
 
 export function registerAnalyticsRoutes(app: Router) {
-    // POST /api/analytics/track - Log an analytics event
+    // POST /analytics - Log an analytics event
     app.post(
-        "/api/analytics/track",
+        "/analytics",
         asyncHandler(async (req, res) => {
             const parsed = insertAnalyticsSchema.safeParse(req.body);
             if (!parsed.success) {
@@ -22,9 +22,9 @@ export function registerAnalyticsRoutes(app: Router) {
         })
     );
 
-    // GET /api/analytics/summary - Get aggregated analytics for dashboard
+    // GET /analytics/summary - Get aggregated analytics for dashboard
     app.get(
-        "/api/analytics/summary",
+        "/analytics/summary",
         isAuthenticated,
         asyncHandler(async (_req, res) => {
             const summary = await storage.getAnalyticsSummary();

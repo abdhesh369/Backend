@@ -3,8 +3,9 @@ import { upload } from "../lib/cloudinary.js";
 import { isAuthenticated } from "../auth.js";
 
 export function registerUploadRoutes(app: Router) {
+    // POST /upload - Upload file to Cloudinary
     app.post(
-        "/api/upload",
+        "/upload",
         isAuthenticated,
         (req, res, next) => {
             upload.single("image")(req, res, (err) => {
@@ -12,7 +13,7 @@ export function registerUploadRoutes(app: Router) {
                     console.error("Multer/Cloudinary Error:", err);
                     return res.status(500).json({
                         message: "Upload service error",
-                        details: err.message || String(err)
+                        details: err.message || String(err),
                     });
                 }
 

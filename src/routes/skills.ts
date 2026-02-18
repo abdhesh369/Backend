@@ -38,18 +38,18 @@ export function registerSkillRoutes(app: Router) {
         })
     );
 
-    // GET /api/skills - List all skills
+    // GET /skills - Get all skills
     app.get(
-        api.skills.list.path,
+        "/skills",
         asyncHandler(async (_req, res) => {
             const skills = await storage.getSkills();
             res.json(skills);
         })
     );
 
-    // GET /api/skills/:id - Get single skill
+    // GET /skills/:id - Get skill by ID
     app.get(
-        "/api/skills/:id",
+        "/skills/:id",
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
@@ -65,9 +65,9 @@ export function registerSkillRoutes(app: Router) {
         })
     );
 
-    // POST /api/skills - Create skill
+    // POST /skills - Create skill
     app.post(
-        "/api/skills",
+        "/skills",
         isAuthenticated,
         validateBody(insertSkillApiSchema),
         asyncHandler(async (req, res) => {
@@ -76,9 +76,9 @@ export function registerSkillRoutes(app: Router) {
         })
     );
 
-    // PUT /api/skills/:id - Update skill
-    app.put(
-        "/api/skills/:id",
+    // PATCH /skills/:id - Update skill
+    app.patch(
+        "/skills/:id",
         isAuthenticated,
         validateBody(insertSkillApiSchema.partial()),
         asyncHandler(async (req, res) => {
@@ -92,21 +92,9 @@ export function registerSkillRoutes(app: Router) {
         })
     );
 
-    // POST /api/skills/bulk-delete - Bulk delete skills
-    app.post(
-        "/api/skills/bulk-delete",
-        isAuthenticated,
-        asyncHandler(async (req, res) => {
-            const schema = z.object({ ids: z.array(z.number()) });
-            const { ids } = schema.parse(req.body);
-            await storage.bulkDeleteSkills(ids);
-            res.status(204).send();
-        })
-    );
-
-    // DELETE /api/skills/:id - Delete skill
+    // DELETE /skills/:id - Delete skill
     app.delete(
-        "/api/skills/:id",
+        "/skills/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -115,6 +103,18 @@ export function registerSkillRoutes(app: Router) {
                 return;
             }
             await storage.deleteSkill(id);
+            res.status(204).send();
+        })
+    );
+
+    // DELETE /skills - Bulk delete skills
+    app.delete(
+        "/skills",
+        isAuthenticated,
+        asyncHandler(async (req, res) => {
+            const schema = z.object({ ids: z.array(z.number()) });
+            const { ids } = schema.parse(req.body);
+            await storage.bulkDeleteSkills(ids);
             res.status(204).send();
         })
     );

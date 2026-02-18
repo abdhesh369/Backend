@@ -27,18 +27,18 @@ function validateBody<T extends z.ZodType>(schema: T) {
 }
 
 export function registerExperienceRoutes(app: Router) {
-    // GET /api/experiences - List all experiences
+    // GET /experiences - Get all experiences
     app.get(
-        api.experiences.list.path,
+        "/experiences",
         asyncHandler(async (_req, res) => {
             const experiences = await storage.getExperiences();
             res.json(experiences);
         })
     );
 
-    // GET /api/experiences/:id - Get single experience
+    // GET /experiences/:id - Get experience by ID
     app.get(
-        "/api/experiences/:id",
+        "/experiences/:id",
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
@@ -54,9 +54,9 @@ export function registerExperienceRoutes(app: Router) {
         })
     );
 
-    // POST /api/experiences - Create experience
+    // POST /experiences - Create experience
     app.post(
-        "/api/experiences",
+        "/experiences",
         isAuthenticated,
         validateBody(insertExperienceApiSchema),
         asyncHandler(async (req, res) => {
@@ -65,9 +65,9 @@ export function registerExperienceRoutes(app: Router) {
         })
     );
 
-    // PUT /api/experiences/:id - Update experience
-    app.put(
-        "/api/experiences/:id",
+    // PATCH /experiences/:id - Update experience
+    app.patch(
+        "/experiences/:id",
         isAuthenticated,
         validateBody(insertExperienceApiSchema.partial()),
         asyncHandler(async (req, res) => {
@@ -81,9 +81,9 @@ export function registerExperienceRoutes(app: Router) {
         })
     );
 
-    // DELETE /api/experiences/:id - Delete experience
+    // DELETE /experiences/:id - Delete experience
     app.delete(
-        "/api/experiences/:id",
+        "/experiences/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);

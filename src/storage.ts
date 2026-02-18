@@ -79,6 +79,8 @@ export interface IStorage {
   getMindset(): Promise<Mindset[]>;
   getMindsetById(id: number): Promise<Mindset | null>;
   createMindset(mindset: Omit<Mindset, "id">): Promise<Mindset>;
+  updateMindset(id: number, mindset: Partial<Omit<Mindset, "id">>): Promise<Mindset>;
+  deleteMindset(id: number): Promise<void>;
 
   // Analytics
   logAnalyticsEvent(event: InsertAnalytics): Promise<Analytics>;
@@ -97,7 +99,6 @@ export interface IStorage {
   createSeoSettings(settings: InsertSeoSettings): Promise<SeoSettings>;
   updateSeoSettings(id: number, settings: Partial<InsertSeoSettings>): Promise<SeoSettings>;
   deleteSeoSettings(id: number): Promise<void>;
-  deleteSeoSettings(id: number): Promise<void>;
 
   // Articles
   getArticles(status?: string): Promise<Article[]>;
@@ -106,6 +107,7 @@ export interface IStorage {
   createArticle(article: InsertArticle): Promise<Article>;
   updateArticle(id: number, article: Partial<InsertArticle>): Promise<Article>;
   deleteArticle(id: number): Promise<void>;
+  bulkDeleteArticles(ids: number[]): Promise<void>;
 }
 
 function logStorage(message: string, level: "info" | "error" | "warn" = "info") {
@@ -427,10 +429,12 @@ export class DatabaseStorage implements IStorage {
   async bulkUpdateProjectStatus(ids: number[], status: string): Promise<void> {
     if (ids.length === 0) return;
     try {
-      await db
-        .update(projectsTable)
-        .set({ status })
-        .where(inArray(projectsTable.id, ids));
+      await db.transaction(async (tx: any) => {
+        await tx
+          .update(projectsTable)
+          .set({ status })
+          .where(inArray(projectsTable.id, ids));
+      });
       logStorage(`Bulk updated status for ${ids.length} projects to ${status}`);
     } catch (error) {
       logStorage(`Failed to bulk update project status: ${error}`, "error");
@@ -554,7 +558,9 @@ export class DatabaseStorage implements IStorage {
   async bulkDeleteSkills(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
     try {
-      await db.delete(skillsTable).where(inArray(skillsTable.id, ids));
+      await db.transaction(async (tx: any) => {
+        await tx.delete(skillsTable).where(inArray(skillsTable.id, ids));
+      });
       this.invalidateSkillsCache();
       logStorage(`Bulk deleted ${ids.length} skills`);
     } catch (error) {
@@ -810,6 +816,31 @@ export class DatabaseStorage implements IStorage {
       return transformMindset(inserted);
     } catch (error) {
       logStorage(`Failed to create mindset: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async updateMindset(id: number, mindset: Partial<Omit<Mindset, "id">>): Promise<Mindset> {
+    try {
+      const [updated] = await db
+        .update(mindsetTable)
+        .set(mindset)
+        .where(eq(mindsetTable.id, id))
+        .returning();
+      if (!updated) throw new Error(`Mindset principle ${id} not found after update`);
+      return transformMindset(updated);
+    } catch (error) {
+      logStorage(`Failed to update mindset ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async deleteMindset(id: number): Promise<void> {
+    try {
+      await db.delete(mindsetTable).where(eq(mindsetTable.id, id));
+      logStorage(`Deleted mindset principle: ${id}`);
+    } catch (error) {
+      logStorage(`Failed to delete mindset ${id}: ${error}`, "error");
       throw error;
     }
   }
@@ -1077,41 +1108,40 @@ export class DatabaseStorage implements IStorage {
       }
 
       const { tags, ...articleData } = article;
-
-      // Auto-generate slug if not provided
       const slug = articleData.slug || articleData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-      const [inserted] = await db.insert(articlesTable).values({
-        ...articleData,
-        slug,
-        excerpt: articleData.excerpt ?? null,
-        featuredImage: articleData.featuredImage ?? null,
-        status: articleData.status || "draft",
-        publishedAt: articleData.publishedAt ? new Date(articleData.publishedAt) : null,
-        viewCount: 0,
-        readTimeMinutes: articleData.readTimeMinutes ?? 0,
-        metaTitle: articleData.metaTitle ?? null,
-        metaDescription: articleData.metaDescription ?? null,
-        authorId: null,
-      }).returning();
+      return await db.transaction(async (tx: any) => {
+        const [inserted] = await tx.insert(articlesTable).values({
+          ...articleData,
+          slug,
+          excerpt: articleData.excerpt ?? null,
+          featuredImage: articleData.featuredImage ?? null,
+          status: articleData.status || "draft",
+          publishedAt: articleData.publishedAt ? new Date(articleData.publishedAt) : null,
+          viewCount: 0,
+          readTimeMinutes: articleData.readTimeMinutes ?? 0,
+          metaTitle: articleData.metaTitle ?? null,
+          metaDescription: articleData.metaDescription ?? null,
+          authorId: null,
+        }).returning();
 
-      if (!inserted) throw new Error("Failed to create article");
+        if (!inserted) throw new Error("Failed to create article");
 
-      // Handle Tags
-      if (tags && tags.length > 0) {
-        await db.insert(articleTagsTable).values(
-          tags.map((tag: string) => ({
-            articleId: inserted.id,
-            tag
-          }))
-        );
-      }
+        if (tags && tags.length > 0) {
+          await tx.insert(articleTagsTable).values(
+            tags.map((tag: string) => ({
+              articleId: inserted.id,
+              tag
+            }))
+          );
+        }
 
-      const fullArticle = await this.getArticleById(inserted.id);
-      if (!fullArticle) throw new Error("Failed to fetch inserted article");
+        const fullArticle = await this.getArticleById(inserted.id);
+        if (!fullArticle) throw new Error("Failed to fetch inserted article");
 
-      logStorage(`Created article: ${fullArticle.title}`);
-      return fullArticle;
+        logStorage(`Created article: ${fullArticle.title}`);
+        return fullArticle;
+      });
     } catch (error) {
       logStorage(`Failed to create article: ${error}`, "error");
       throw error;
@@ -1122,40 +1152,39 @@ export class DatabaseStorage implements IStorage {
     try {
       const { tags, ...articleData } = article;
 
-      // Update Article
-      if (Object.keys(articleData).length > 0) {
-        // Need to handle Date conversion for publishedAt if it's in the update
-        const updateData: any = { ...articleData };
-        if (updateData.publishedAt) {
-          updateData.publishedAt = new Date(updateData.publishedAt);
+      return await db.transaction(async (tx: any) => {
+        if (Object.keys(articleData).length > 0) {
+          const updateData: any = { ...articleData };
+          if (updateData.publishedAt) {
+            updateData.publishedAt = new Date(updateData.publishedAt);
+          }
+
+          await tx
+            .update(articlesTable)
+            .set(updateData)
+            .where(eq(articlesTable.id, id));
         }
 
-        await db
-          .update(articlesTable)
-          .set(updateData)
-          .where(eq(articlesTable.id, id));
-      }
-
-      // Update Tags if provided (Replace all?)
-      if (tags) {
-        await db.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
-        if (tags.length > 0) {
-          await db.insert(articleTagsTable).values(
-            tags.map((tag: string) => ({
-              articleId: id,
-              tag
-            }))
-          );
+        if (tags) {
+          await tx.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+          if (tags.length > 0) {
+            await tx.insert(articleTagsTable).values(
+              tags.map((tag: string) => ({
+                articleId: id,
+                tag
+              }))
+            );
+          }
         }
-      }
 
-      const updated = await this.getArticleById(id);
-      if (!updated) {
-        throw new Error(`Article with id ${id} not found after update`);
-      }
+        const updated = await this.getArticleById(id);
+        if (!updated) {
+          throw new Error(`Article with id ${id} not found after update`);
+        }
 
-      logStorage(`Updated article: ${updated.title}`);
-      return updated;
+        logStorage(`Updated article: ${updated.title}`);
+        return updated;
+      });
     } catch (error) {
       logStorage(`Failed to update article ${id}: ${error}`, "error");
       throw error;
@@ -1169,15 +1198,31 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Article with id ${id} not found`);
       }
 
-      // Delete tags first
-      await db.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
-
-      // Delete article
-      await db.delete(articlesTable).where(eq(articlesTable.id, id));
+      await db.transaction(async (tx: any) => {
+        // Delete tags first
+        await tx.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+        // Delete article
+        await tx.delete(articlesTable).where(eq(articlesTable.id, id));
+      });
 
       logStorage(`Deleted article: ${article.title}`);
     } catch (error) {
       logStorage(`Failed to delete article ${id}: ${error}`, "error");
+      throw error;
+    }
+  }
+
+  async bulkDeleteArticles(ids: number[]): Promise<void> {
+    try {
+      await db.transaction(async (tx: any) => {
+        // Delete all tags for these articles
+        await tx.delete(articleTagsTable).where(inArray(articleTagsTable.articleId, ids));
+        // Delete the articles
+        await tx.delete(articlesTable).where(inArray(articlesTable.id, ids));
+      });
+      logStorage(`Bulk deleted ${ids.length} articles`);
+    } catch (error) {
+      logStorage(`Failed bulk delete articles: ${error}`, "error");
       throw error;
     }
   }

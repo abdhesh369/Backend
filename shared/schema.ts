@@ -243,6 +243,13 @@ export const mindsetSchema = z.object({
   tags: z.array(z.string()).default([]),
 });
 
+export const insertMindsetApiSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().max(5000).default(""),
+  icon: z.string().max(100).default("Brain"),
+  tags: z.array(z.string()).default([]),
+});
+
 export const experienceSchema = z.object({
   id: z.number(),
   role: z.string().min(1).max(200),
@@ -398,6 +405,7 @@ export type InsertMessage = z.infer<typeof insertMessageApiSchema>;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateApiSchema>;
 export type InsertSeoSettings = z.infer<typeof insertSeoSettingsApiSchema>;
+export type InsertMindset = z.infer<typeof insertMindsetApiSchema>;
 export type InsertArticle = z.infer<typeof insertArticleApiSchema>;
 
 // ================= TYPE GUARDS =================

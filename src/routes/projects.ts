@@ -30,18 +30,18 @@ function validateBody<T extends z.ZodType>(schema: T) {
 }
 
 export function registerProjectRoutes(app: Router) {
-  // GET /api/projects - List all projects
+  // GET /api/projects - Get all projects
   app.get(
-    api.projects.list.path,
+    "/projects",
     asyncHandler(async (_req, res) => {
       const projects = await storage.getProjects();
       res.json(projects);
     })
   );
 
-  // GET /api/projects/:id - Get single project
+  // GET /api/projects/:id - Get project by ID
   app.get(
-    "/api/projects/:id",
+    "/projects/:id",
     asyncHandler(async (req, res) => {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -59,7 +59,7 @@ export function registerProjectRoutes(app: Router) {
 
   // POST /api/projects - Create project
   app.post(
-    "/api/projects",
+    "/projects",
     isAuthenticated,
     validateBody(insertProjectApiSchema),
     asyncHandler(async (req, res) => {

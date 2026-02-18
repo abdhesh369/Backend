@@ -27,7 +27,7 @@ const loginLimiter = rateLimit({
  * POST /api/auth/login
  * Verifies credentials and returns a JWT
  */
-router.post("/auth/login", loginLimiter, asyncHandler(async (req: Request, res: Response) => {
+router.post("/login", loginLimiter, asyncHandler(async (req: Request, res: Response) => {
     const { password } = req.body;
 
     if (!password) {
@@ -54,9 +54,9 @@ router.post("/auth/login", loginLimiter, asyncHandler(async (req: Request, res: 
 
 /**
  * POST /api/auth/logout
- * Revokes the current JWT
+ * Blacklists the current token
  */
-router.post("/auth/logout", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+router.post("/logout", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
         const token = authHeader.substring(7);

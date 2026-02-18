@@ -144,9 +144,9 @@ export function registerMessageRoutes(app: Router) {
         })
     );
 
-    // POST /api/messages/bulk-delete - Bulk delete messages
+    // POST /messages/bulk-delete - Bulk delete messages
     app.post(
-        "/api/messages/bulk-delete",
+        "/messages/bulk-delete",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const schema = z.object({ ids: z.array(z.number()) });
@@ -156,9 +156,9 @@ export function registerMessageRoutes(app: Router) {
         })
     );
 
-    // POST /api/messages/:id/reply - Reply to a message
+    // POST /messages/:id/reply - Reply to a message
     app.post(
-        "/api/messages/:id/reply",
+        "/messages/:id/reply",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -211,9 +211,9 @@ export function registerMessageRoutes(app: Router) {
         })
     );
 
-    // DELETE /api/messages/:id - Delete message
+    // DELETE /messages/:id - Delete message
     app.delete(
-        "/api/messages/:id",
+        "/messages/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);

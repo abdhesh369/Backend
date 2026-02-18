@@ -5,9 +5,9 @@ import { isAuthenticated, asyncHandler } from "../auth.js";
 import { z } from "zod";
 
 export function registerEmailTemplateRoutes(app: Router) {
-    // GET /api/email-templates - List all templates (admin only)
+    // GET /email-templates - List all templates (admin only)
     app.get(
-        "/api/email-templates",
+        "/email-templates",
         isAuthenticated,
         asyncHandler(async (_req, res) => {
             const templates = await storage.getEmailTemplates();
@@ -15,9 +15,9 @@ export function registerEmailTemplateRoutes(app: Router) {
         })
     );
 
-    // GET /api/email-templates/:id - Get single template
+    // GET /email-templates/:id - Get single template
     app.get(
-        "/api/email-templates/:id",
+        "/email-templates/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -34,9 +34,9 @@ export function registerEmailTemplateRoutes(app: Router) {
         })
     );
 
-    // POST /api/email-templates - Create template
+    // POST /email-templates - Create template
     app.post(
-        "/api/email-templates",
+        "/email-templates",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const parsed = insertEmailTemplateApiSchema.safeParse(req.body);
@@ -49,9 +49,9 @@ export function registerEmailTemplateRoutes(app: Router) {
         })
     );
 
-    // PUT /api/email-templates/:id - Update template
+    // PUT /email-templates/:id - Update template
     app.put(
-        "/api/email-templates/:id",
+        "/email-templates/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);
@@ -69,9 +69,9 @@ export function registerEmailTemplateRoutes(app: Router) {
         })
     );
 
-    // DELETE /api/email-templates/:id - Delete template
+    // DELETE /email-templates/:id - Delete template
     app.delete(
-        "/api/email-templates/:id",
+        "/email-templates/:id",
         isAuthenticated,
         asyncHandler(async (req, res) => {
             const id = parseInt(req.params.id, 10);

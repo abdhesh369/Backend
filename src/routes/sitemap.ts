@@ -3,7 +3,7 @@ import { storage } from "../storage.js";
 
 const router = Router();
 
-router.get("/sitemap.xml", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const baseUrl = process.env.VITE_PUBLIC_URL || "https://abdheshsah.com.np";
     const seoSettings = await storage.getSeoSettings();
