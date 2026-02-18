@@ -2,16 +2,34 @@ import { Request, Response, NextFunction } from "express";
 import { env } from "./env.js";
 import jwt from "jsonwebtoken";
 
+// In-memory token blacklist (use Redis in production)
+const tokenBlacklist = new Set<string>();
+
 /**
- * Middleware to check for admin authentication via API Key
+ * Revokes a JWT token by adding it to the blacklist
+ */
+export function revokeToken(token: string) {
+    tokenBlacklist.add(token);
+}
+
+/**
+ * Middleware to check for admin authentication via JWT or API Key
  */
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     // 1. Check for Bearer token in Authorization header
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
         const token = authHeader.substring(7);
+
+        // Check if token is blacklisted
+        if (tokenBlacklist.has(token)) {
+            return res.status(401).json({ message: "Token has been revoked. Please login again." });
+        }
+
         try {
-            jwt.verify(token, env.JWT_SECRET);
+            const decoded = jwt.verify(token, env.JWT_SECRET);
+            // Attach decoded token to request if needed
+            (req as any).user = decoded;
             return next();
         } catch (err) {
             return res.status(401).json({ message: "Invalid or expired token" });

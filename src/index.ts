@@ -13,6 +13,8 @@ import { checkDatabaseHealth } from "./db.js";
 
 import rateLimit from "express-rate-limit";
 
+import { randomUUID } from "crypto";
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -33,33 +35,46 @@ function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${sanitizedMessage}`);
 }
 
+// Request Tracing
+app.use((req: Request, res: Response, next: NextFunction) => {
+  (req as any).id = randomUUID();
+  res.setHeader("X-Request-ID", (req as any).id);
+  next();
+});
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:4173",
   "https://abdheshsah.com.np",
   "https://www.abdheshsah.com.np",
   process.env.FRONTEND_URL,
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 app.use(compression());
 
-// Global Rate Limiter: Baseline protection for all API routes
+// Global Rate Limiter
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { message: "Too many requests from this IP, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api", globalLimiter);
 
+// Harden CORS
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // In production, require origin header
+      if (process.env.NODE_ENV === 'production' && !origin) {
+        callback(new Error("Origin header required"));
+        return;
+      }
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.log(`CORS blocked origin: ${origin}`);
+        console.warn(`CORS blocked origin: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -69,18 +84,30 @@ app.use(
   })
 );
 
+// Tighten Helmet CSP
 app.use(
   helmet({
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
+        "default-src": ["'self'"],
         "script-src": ["'self'", "https://www.googletagmanager.com"],
         "connect-src": ["'self'", "https://www.google-analytics.com"],
-        "img-src": ["'self'", "data:", "https:", "http:"],
+        "img-src": [
+          "'self'",
+          "data:",
+          "https://res.cloudinary.com",
+          "https://*.cloudinary.com",
+        ],
         "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "frame-ancestors": ["'none'"],
+        "form-action": ["'self'"],
       },
     },
+    crossOriginEmbedderPolicy: true,
+    crossOriginOpenerPolicy: true,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
     strictTransportSecurity: {
       maxAge: 31536000,
       includeSubDomains: true,
@@ -89,46 +116,67 @@ app.use(
   })
 );
 
+// Reduce Payload Limits
 app.use(
   express.json({
-    limit: "10mb",
+    limit: "1mb",
     verify: (req: Request, _res: Response, buf: Buffer) => {
       req.rawBody = buf;
     },
   })
 );
-app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
+// Request Logger with ID
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
     if (req.path.startsWith("/api")) {
       const duration = Date.now() - start;
-      log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+      log(`[${(req as any).id}] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
     }
   });
   next();
 });
 
-app.get("/health", (_req: Request, res: Response) => {
-  res.status(200).json({
-    ok: true,
+// Health check with database connectivity verification
+app.get("/health", async (_req: Request, res: Response) => {
+  const dbHealth = await checkDatabaseHealth();
+  const status = dbHealth.healthy ? 200 : 503;
+
+  res.status(status).json({
+    status: dbHealth.healthy ? "healthy" : "unhealthy",
+    database: dbHealth.healthy ? "connected" : "disconnected",
     environment: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV === "development" && { details: dbHealth.message })
   });
 });
 
 function setupGracefulShutdown() {
-  const shutdown = (signal: string) => {
+  const shutdown = async (signal: string) => {
     log(`${signal} received, shutting down...`, "shutdown");
 
+    // Close HTTP server first to stop accepting new requests
     httpServer.close(() => {
       log("HTTP server closed", "shutdown");
-      process.exit(0);
     });
 
+    try {
+      // Close database pool
+      const { closePool } = await import("./db.js");
+      await closePool();
+      log("Database pool closed", "shutdown");
+
+      process.exit(0);
+    } catch (err) {
+      log(`Error during shutdown: ${err}`, "error");
+      process.exit(1);
+    }
+
+    // Force exit if shutdown takes too long
     setTimeout(() => {
-      log("Forced shutdown", "shutdown");
+      log("Forced shutdown due to timeout", "shutdown");
       process.exit(1);
     }, 10000);
   };
@@ -142,7 +190,6 @@ async function startServer() {
   try {
     log("Starting server...", "startup");
 
-    // STEP 0: CHECK DATABASE HEALTH
     log("📍 Checking database health...", "startup");
     const health = await checkDatabaseHealth();
 
@@ -153,41 +200,47 @@ async function startServer() {
     }
     log("✓ Database is healthy", "startup");
 
-    // STEP 1: CREATE TABLES
-    // managed by drizzle-kit push now
-    log("✓ Tables managed by Drizzle", "startup");
+    // Controlled seeding: Skip in production unless explicitly forced
+    const shouldSeed = process.env.NODE_ENV !== "production" || process.env.FORCE_SEED === "true";
 
-    // STEP 2: SEED DATABASE
-    log("📍 Seeding Database...", "startup");
-    try {
-      await seedDatabase();
-      log("✓ Seeding complete", "startup");
-    } catch (err) {
-      log(`⚠️ Seeding failed: ${err}`, "startup");
+    if (shouldSeed) {
+      log("📍 Seeding Database...", "startup");
+      try {
+        await seedDatabase();
+        log("✓ Seeding complete", "startup");
+      } catch (err) {
+        log(`⚠️ Seeding failed: ${err}`, "startup");
+      }
+    } else {
+      log("ℹ️ Skipping auto-seeding in production environment", "startup");
     }
 
-    // STEP 3: REGISTER ROUTES
     log("📍 Registering API routes...", "startup");
     registerRoutes(app);
     log("✓ API routes registered", "startup");
 
-    // STEP 4: GLOBAL ERROR HANDLER
+    // Sanitize Global Error Handler
     app.use(
-      (err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
+      (err: Error & { status?: number; statusCode?: number }, req: Request, res: Response, _next: NextFunction) => {
         const status = err.status || err.statusCode || 500;
-        const message = err.message || "Internal Server Error";
-        log(`Error ${status}: ${message}`, "error");
+        const message = status === 500 ? "Internal Server Error" : err.message;
+
+        log(`[${(req as any).id}] Error ${status}: ${err.message}`, "error");
+
         res.status(status).json({
-          message,
-          ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+          error: {
+            message,
+            status,
+            ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+          }
         });
       }
     );
 
-    // STEP 5: SETUP GRACEFUL SHUTDOWN
+    // SETUP GRACEFUL SHUTDOWN
     setupGracefulShutdown();
 
-    // STEP 6: START HTTP SERVER
+    // START HTTP SERVER
     const port = parseInt(process.env.PORT || "5000", 10);
     const host = "0.0.0.0";
 

@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import { Router, type Express } from "express";
 import { upload } from "../lib/cloudinary.js";
 import { isAuthenticated } from "../auth.js";
 
-export function registerUploadRoutes(app: Express) {
+export function registerUploadRoutes(app: Router) {
     app.post(
         "/api/upload",
         isAuthenticated,

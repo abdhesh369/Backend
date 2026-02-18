@@ -7,6 +7,7 @@ import { insertMessageApiSchema } from "../../shared/schema.js";
 import { api } from "../../shared/routes.js";
 import { env } from "../env.js";
 import { isAuthenticated, asyncHandler } from "../auth.js";
+import DOMPurify from 'isomorphic-dompurify';
 
 // Simple HTML escaping helper to prevent XSS in email templates
 function escapeHtml(text: string): string {
@@ -111,12 +112,12 @@ export function registerMessageRoutes(app: Router) {
                     }
 
                     const resend = new Resend(env.RESEND_API_KEY);
-                    
+
                     // The verified domain is now used as the sender
-                    const targetEmail = "abdheshshah111@gmail.com";
+                    const targetEmail = env.ADMIN_EMAIL;
 
                     const { data, error } = await resend.emails.send({
-                        from: "contact@abdheshsah.com.np",
+                        from: env.CONTACT_EMAIL,
                         to: targetEmail,
                         subject: `Portfolio Message: ${escapeHtml(message.subject || "No Subject")}`,
                         html: `
@@ -185,11 +186,18 @@ export function registerMessageRoutes(app: Router) {
             }
 
             const resend = new Resend(env.RESEND_API_KEY);
+
+            // Sanitize HTML before sending
+            const sanitizedBody = DOMPurify.sanitize(body, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li'],
+                ALLOWED_ATTR: ['href', 'target']
+            });
+
             const { error } = await resend.emails.send({
-                from: "contact@abdheshsah.com.np",
+                from: env.CONTACT_EMAIL,
                 to: message.email,
                 subject: subject,
-                html: body,
+                html: sanitizedBody,
             });
 
             if (error) {

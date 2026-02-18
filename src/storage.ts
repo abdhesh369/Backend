@@ -3,7 +3,7 @@
 // FILE: src/storage.ts
 // ============================================================
 import { eq, asc, desc, inArray } from "drizzle-orm";
-import { db as db2 } from "./db.js";
+import { db } from "./db.js";
 import {
   projectsTable,
   skillsTable,
@@ -280,7 +280,7 @@ export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     try {
       const start = Date.now();
-      const result = await db2.select().from(projectsTable).orderBy(asc(projectsTable.displayOrder));
+      const result = await db.select().from(projectsTable).orderBy(asc(projectsTable.displayOrder));
       const duration = Date.now() - start;
       logStorage(`Fetched ${result.length} projects in ${duration}ms`);
       return result.map(transformProject);
@@ -292,7 +292,7 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectById(id: number): Promise<Project | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(projectsTable)
         .where(eq(projectsTable.id, id))
@@ -310,7 +310,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error("Title and description are required");
       }
 
-      const [inserted] = await db2
+      const [inserted] = await db
         .insert(projectsTable)
         .values({
           title: project.title,
@@ -345,7 +345,7 @@ export class DatabaseStorage implements IStorage {
         updates.techStack = project.techStack;
       }
 
-      const [updated] = await db2
+      const [updated] = await db
         .update(projectsTable)
         .set(updates)
         .where(eq(projectsTable.id, id))
@@ -370,7 +370,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Project with id ${id} not found`);
       }
 
-      await db2
+      await db
         .delete(projectsTable)
         .where(eq(projectsTable.id, id));
 
@@ -385,7 +385,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Using Promise.all for parallel updates is fine for this scale
       const updates = orderedIds.map((id, index) =>
-        db2
+        db
           .update(projectsTable)
           .set({ displayOrder: index })
           .where(eq(projectsTable.id, id))
@@ -398,10 +398,25 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async bulkDeleteMessages(ids: number[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+      await db.transaction(async (tx: any) => {
+        await tx.delete(messagesTable).where(inArray(messagesTable.id, ids));
+      });
+      logStorage(`Bulk deleted ${ids.length} messages`);
+    } catch (error) {
+      logStorage(`Failed to bulk delete messages: ${error}`, "error");
+      throw error;
+    }
+  }
+
   async bulkDeleteProjects(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
     try {
-      await db2.delete(projectsTable).where(inArray(projectsTable.id, ids));
+      await db.transaction(async (tx: any) => {
+        await tx.delete(projectsTable).where(inArray(projectsTable.id, ids));
+      });
       logStorage(`Bulk deleted ${ids.length} projects`);
     } catch (error) {
       logStorage(`Failed to bulk delete projects: ${error}`, "error");
@@ -412,7 +427,7 @@ export class DatabaseStorage implements IStorage {
   async bulkUpdateProjectStatus(ids: number[], status: string): Promise<void> {
     if (ids.length === 0) return;
     try {
-      await db2
+      await db
         .update(projectsTable)
         .set({ status })
         .where(inArray(projectsTable.id, ids));
@@ -436,7 +451,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const start = Date.now();
-      const result = await db2.select().from(skillsTable);
+      const result = await db.select().from(skillsTable);
       const duration = Date.now() - start;
 
       const transformed = result.map(transformSkill);
@@ -453,7 +468,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSkillById(id: number): Promise<Skill | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(skillsTable)
         .where(eq(skillsTable.id, id))
@@ -471,7 +486,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error("Name and category are required");
       }
 
-      const [inserted] = await db2
+      const [inserted] = await db
         .insert(skillsTable)
         .values({
           name: skill.name,
@@ -498,7 +513,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateSkill(id: number, skill: Partial<InsertSkill>): Promise<Skill> {
     try {
-      const [updated] = await db2
+      const [updated] = await db
         .update(skillsTable)
         .set(skill)
         .where(eq(skillsTable.id, id))
@@ -524,7 +539,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Skill with id ${id} not found`);
       }
 
-      await db2
+      await db
         .delete(skillsTable)
         .where(eq(skillsTable.id, id));
 
@@ -539,7 +554,7 @@ export class DatabaseStorage implements IStorage {
   async bulkDeleteSkills(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
     try {
-      await db2.delete(skillsTable).where(inArray(skillsTable.id, ids));
+      await db.delete(skillsTable).where(inArray(skillsTable.id, ids));
       this.invalidateSkillsCache();
       logStorage(`Bulk deleted ${ids.length} skills`);
     } catch (error) {
@@ -561,7 +576,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const start = Date.now();
-      const result = await db2.select().from(experiencesTable);
+      const result = await db.select().from(experiencesTable);
       const duration = Date.now() - start;
 
       const transformed = result.map(transformExperience);
@@ -578,7 +593,7 @@ export class DatabaseStorage implements IStorage {
 
   async getExperienceById(id: number): Promise<Experience | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(experiencesTable)
         .where(eq(experiencesTable.id, id))
@@ -596,7 +611,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error("Role and organization are required");
       }
 
-      const [inserted] = await db2
+      const [inserted] = await db
         .insert(experiencesTable)
         .values({
           role: exp.role,
@@ -620,7 +635,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateExperience(id: number, exp: Partial<InsertExperience>): Promise<Experience> {
     try {
-      const [updated] = await db2
+      const [updated] = await db
         .update(experiencesTable)
         .set(exp)
         .where(eq(experiencesTable.id, id))
@@ -646,7 +661,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Experience with id ${id} not found`);
       }
 
-      await db2
+      await db
         .delete(experiencesTable)
         .where(eq(experiencesTable.id, id));
 
@@ -661,7 +676,7 @@ export class DatabaseStorage implements IStorage {
   async getMessages(): Promise<Message[]> {
     try {
       const start = Date.now();
-      const result = await db2.select().from(messagesTable);
+      const result = await db.select().from(messagesTable);
       const duration = Date.now() - start;
       logStorage(`Fetched ${result.length} messages in ${duration}ms`);
       return result.map(transformMessage);
@@ -673,7 +688,7 @@ export class DatabaseStorage implements IStorage {
 
   async getMessageById(id: number): Promise<Message | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(messagesTable)
         .where(eq(messagesTable.id, id))
@@ -702,7 +717,7 @@ export class DatabaseStorage implements IStorage {
         message: message.message.trim().slice(0, 5000),
       };
 
-      const [inserted] = await db2
+      const [inserted] = await db
         .insert(messagesTable)
         .values(sanitized)
         .returning();
@@ -724,7 +739,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Message with id ${id} not found`);
       }
 
-      await db2
+      await db
         .delete(messagesTable)
         .where(eq(messagesTable.id, id));
 
@@ -735,21 +750,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async bulkDeleteMessages(ids: number[]): Promise<void> {
-    if (ids.length === 0) return;
-    try {
-      await db2.delete(messagesTable).where(inArray(messagesTable.id, ids));
-      logStorage(`Bulk deleted ${ids.length} messages`);
-    } catch (error) {
-      logStorage(`Failed to bulk delete messages: ${error}`, "error");
-      throw error;
-    }
-  }
-
-
   async getSkillConnections(): Promise<SkillConnection[]> {
     try {
-      const result = await db2.select().from(skillConnectionsTable);
+      const result = await db.select().from(skillConnectionsTable);
       return result as SkillConnection[];
     } catch (error) {
       logStorage(`Failed to get skill connections: ${error}`, "error");
@@ -759,7 +762,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSkillConnection(connection: Omit<SkillConnection, "id">): Promise<SkillConnection> {
     try {
-      const [inserted] = await db2.insert(skillConnectionsTable).values({
+      const [inserted] = await db.insert(skillConnectionsTable).values({
         fromSkillId: connection.fromSkillId,
         toSkillId: connection.toSkillId,
       }).returning();
@@ -773,7 +776,7 @@ export class DatabaseStorage implements IStorage {
 
   async getMindset(): Promise<Mindset[]> {
     try {
-      const result = await db2.select().from(mindsetTable);
+      const result = await db.select().from(mindsetTable);
       return result.map(transformMindset);
     } catch (error) {
       logStorage(`Failed to get mindset: ${error}`, "error");
@@ -783,7 +786,7 @@ export class DatabaseStorage implements IStorage {
 
   async getMindsetById(id: number): Promise<Mindset | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(mindsetTable)
         .where(eq(mindsetTable.id, id))
@@ -797,7 +800,7 @@ export class DatabaseStorage implements IStorage {
 
   async createMindset(mindset: Omit<Mindset, "id">): Promise<Mindset> {
     try {
-      const [inserted] = await db2.insert(mindsetTable).values({
+      const [inserted] = await db.insert(mindsetTable).values({
         title: mindset.title,
         description: mindset.description,
         icon: mindset.icon,
@@ -813,7 +816,7 @@ export class DatabaseStorage implements IStorage {
 
   async logAnalyticsEvent(event: InsertAnalytics): Promise<Analytics> {
     try {
-      const [inserted] = await db2.insert(analyticsTable).values(event).returning();
+      const [inserted] = await db.insert(analyticsTable).values(event).returning();
       if (!inserted) throw new Error("Failed to log analytics event");
       return transformAnalytics(inserted);
     } catch (error) {
@@ -825,10 +828,10 @@ export class DatabaseStorage implements IStorage {
   async getAnalyticsSummary(): Promise<any> {
     try {
       // Basic summary logic - can be expanded
-      const allEvents = await db2.select().from(analyticsTable);
+      const allEvents = await db.select().from(analyticsTable);
 
       return {
-        totalViews: allEvents.filter(e => e.type === 'page_view').length,
+        totalViews: allEvents.filter((e: any) => e.type === 'page_view').length,
         // Aggregation logic would go here
         // For now returning basic stats
         events: allEvents.length
@@ -841,7 +844,7 @@ export class DatabaseStorage implements IStorage {
 
   async getEmailTemplates(): Promise<EmailTemplate[]> {
     try {
-      const result = await db2.select().from(emailTemplatesTable);
+      const result = await db.select().from(emailTemplatesTable);
       return result.map(transformEmailTemplate);
     } catch (error) {
       logStorage(`Failed to get email templates: ${error}`, "error");
@@ -851,7 +854,7 @@ export class DatabaseStorage implements IStorage {
 
   async getEmailTemplateById(id: number): Promise<EmailTemplate | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(emailTemplatesTable)
         .where(eq(emailTemplatesTable.id, id))
@@ -865,7 +868,7 @@ export class DatabaseStorage implements IStorage {
 
   async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
     try {
-      const [inserted] = await db2.insert(emailTemplatesTable).values(template).returning();
+      const [inserted] = await db.insert(emailTemplatesTable).values(template).returning();
       if (!inserted) throw new Error("Failed to create email template");
       return transformEmailTemplate(inserted);
     } catch (error) {
@@ -876,7 +879,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateEmailTemplate(id: number, template: Partial<InsertEmailTemplate>): Promise<EmailTemplate> {
     try {
-      const [updated] = await db2
+      const [updated] = await db
         .update(emailTemplatesTable)
         .set(template)
         .where(eq(emailTemplatesTable.id, id))
@@ -891,7 +894,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEmailTemplate(id: number): Promise<void> {
     try {
-      await db2
+      await db
         .delete(emailTemplatesTable)
         .where(eq(emailTemplatesTable.id, id));
       logStorage(`Deleted email template: ${id}`);
@@ -903,7 +906,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSeoSettings(): Promise<SeoSettings[]> {
     try {
-      const result = await db2.select().from(seoSettingsTable);
+      const result = await db.select().from(seoSettingsTable);
       return result.map(transformSeoSettings);
     } catch (error) {
       logStorage(`Failed to get SEO settings: ${error}`, "error");
@@ -913,7 +916,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSeoSettingsBySlug(slug: string): Promise<SeoSettings | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(seoSettingsTable)
         .where(eq(seoSettingsTable.pageSlug, slug))
@@ -927,7 +930,7 @@ export class DatabaseStorage implements IStorage {
 
   async createSeoSettings(settings: InsertSeoSettings): Promise<SeoSettings> {
     try {
-      const [inserted] = await db2.insert(seoSettingsTable).values(settings).returning();
+      const [inserted] = await db.insert(seoSettingsTable).values(settings).returning();
       if (!inserted) throw new Error("Failed to create SEO settings");
 
       logStorage(`Created SEO settings for: ${inserted.pageSlug}`);
@@ -940,7 +943,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateSeoSettings(id: number, settings: Partial<InsertSeoSettings>): Promise<SeoSettings> {
     try {
-      await db2
+      await db
         .update(seoSettingsTable)
         .set(settings)
         .where(eq(seoSettingsTable.id, id));
@@ -951,7 +954,7 @@ export class DatabaseStorage implements IStorage {
       // Using slug might be risky if slug was changed.
       // But wait, I can add getSeoSettingsById if needed, or query directly here.
 
-      const [updated] = await db2.select().from(seoSettingsTable).where(eq(seoSettingsTable.id, id)).limit(1);
+      const [updated] = await db.select().from(seoSettingsTable).where(eq(seoSettingsTable.id, id)).limit(1);
 
       if (!updated) throw new Error(`SEO settings ${id} not found after update`);
 
@@ -964,7 +967,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSeoSettings(id: number): Promise<void> {
     try {
-      await db2
+      await db
         .delete(seoSettingsTable)
         .where(eq(seoSettingsTable.id, id));
       logStorage(`Deleted SEO settings: ${id}`);
@@ -978,7 +981,7 @@ export class DatabaseStorage implements IStorage {
   async getArticles(status?: string): Promise<Article[]> {
     try {
       const start = Date.now();
-      let query = db2.select().from(articlesTable).orderBy(desc(articlesTable.createdAt));
+      let query = db.select().from(articlesTable).orderBy(desc(articlesTable.createdAt));
 
       if (status) {
         // @ts-ignore - Status inference might be tricky
@@ -991,19 +994,19 @@ export class DatabaseStorage implements IStorage {
 
       // Fetch tags for all articles in one go
       const articleIds = result.map(a => a.id);
-      const allTags = await db2
+      const allTags = await db
         .select()
         .from(articleTagsTable)
         .where(inArray(articleTagsTable.articleId, articleIds));
 
       // Group tags by articleId
-      const tagsMap = allTags.reduce((acc, tag) => {
+      const tagsMap = allTags.reduce((acc: any, tag: any) => {
         if (!acc[tag.articleId]) acc[tag.articleId] = [];
         acc[tag.articleId].push(tag.tag);
         return acc;
       }, {} as Record<number, string[]>);
 
-      const formattedResult = result.map(article => ({
+      const formattedResult = result.map((article: any) => ({
         ...transformArticle(article),
         tags: tagsMap[article.id] || []
       }));
@@ -1019,7 +1022,7 @@ export class DatabaseStorage implements IStorage {
 
   async getArticleById(id: number): Promise<Article | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(articlesTable)
         .where(eq(articlesTable.id, id))
@@ -1027,14 +1030,14 @@ export class DatabaseStorage implements IStorage {
 
       if (!result) return null;
 
-      const tags = await db2
+      const tags = await db
         .select({ tag: articleTagsTable.tag })
         .from(articleTagsTable)
         .where(eq(articleTagsTable.articleId, id));
 
       return {
         ...transformArticle(result),
-        tags: tags.map(t => t.tag)
+        tags: tags.map((t: any) => t.tag)
       };
     } catch (error) {
       logStorage(`Failed to get article ${id}: ${error}`, "error");
@@ -1044,7 +1047,7 @@ export class DatabaseStorage implements IStorage {
 
   async getArticleBySlug(slug: string): Promise<Article | null> {
     try {
-      const [result] = await db2
+      const [result] = await db
         .select()
         .from(articlesTable)
         .where(eq(articlesTable.slug, slug))
@@ -1052,14 +1055,14 @@ export class DatabaseStorage implements IStorage {
 
       if (!result) return null;
 
-      const tags = await db2
+      const tags = await db
         .select({ tag: articleTagsTable.tag })
         .from(articleTagsTable)
         .where(eq(articleTagsTable.articleId, result.id));
 
       return {
         ...transformArticle(result),
-        tags: tags.map(t => t.tag)
+        tags: tags.map((t: any) => t.tag)
       };
     } catch (error) {
       logStorage(`Failed to get article by slug ${slug}: ${error}`, "error");
@@ -1078,7 +1081,7 @@ export class DatabaseStorage implements IStorage {
       // Auto-generate slug if not provided
       const slug = articleData.slug || articleData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-      const [inserted] = await db2.insert(articlesTable).values({
+      const [inserted] = await db.insert(articlesTable).values({
         ...articleData,
         slug,
         excerpt: articleData.excerpt ?? null,
@@ -1096,7 +1099,7 @@ export class DatabaseStorage implements IStorage {
 
       // Handle Tags
       if (tags && tags.length > 0) {
-        await db2.insert(articleTagsTable).values(
+        await db.insert(articleTagsTable).values(
           tags.map((tag: string) => ({
             articleId: inserted.id,
             tag
@@ -1127,7 +1130,7 @@ export class DatabaseStorage implements IStorage {
           updateData.publishedAt = new Date(updateData.publishedAt);
         }
 
-        await db2
+        await db
           .update(articlesTable)
           .set(updateData)
           .where(eq(articlesTable.id, id));
@@ -1135,9 +1138,9 @@ export class DatabaseStorage implements IStorage {
 
       // Update Tags if provided (Replace all?)
       if (tags) {
-        await db2.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+        await db.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
         if (tags.length > 0) {
-          await db2.insert(articleTagsTable).values(
+          await db.insert(articleTagsTable).values(
             tags.map((tag: string) => ({
               articleId: id,
               tag
@@ -1167,10 +1170,10 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Delete tags first
-      await db2.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
+      await db.delete(articleTagsTable).where(eq(articleTagsTable.articleId, id));
 
       // Delete article
-      await db2.delete(articlesTable).where(eq(articlesTable.id, id));
+      await db.delete(articlesTable).where(eq(articlesTable.id, id));
 
       logStorage(`Deleted article: ${article.title}`);
     } catch (error) {

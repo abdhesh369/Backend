@@ -5,7 +5,7 @@
     "lib": [
       "ES2020"
     ],
-    "module": "ES2020",
+    "module": "NodeNext",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -17,7 +17,7 @@
     "noEmit": false, // ✅ must emit JS files
     "outDir": "dist", // ✅ output directory for compiled JS
     "rootDir": ".", // ✅ source root
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "declaration": false,
     "declarationMap": false
