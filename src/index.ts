@@ -17,6 +17,7 @@ import rateLimit from "express-rate-limit";
 import { randomUUID } from "crypto";
 
 const app = express();
+app.set("trust proxy", 1); // For production environments behind proxies (Render, Heroku, etc.)
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -93,11 +94,13 @@ app.use(
       useDefaults: true,
       directives: {
         "default-src": ["'self'"],
-        "script-src": ["'self'", "https://www.googletagmanager.com"],
-        "connect-src": ["'self'", "https://www.google-analytics.com"],
+        "script-src": ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+        "connect-src": ["'self'", "https://backend-jmfc.onrender.com", "https://www.google-analytics.com", "https://region1.google-analytics.com"],
         "img-src": [
           "'self'",
           "data:",
+          "https:",
+          "http:",
           "https://res.cloudinary.com",
           "https://*.cloudinary.com",
         ],
